@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-//  ChatCity — Firebase Config & Shared Utils (Stable)
+//  ChatCity — Firebase Config & Shared Utils (Complete)
 // ═══════════════════════════════════════════════════════════
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
@@ -15,7 +15,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
 
 // ═══════════════════════════════════════════════════════════
-// FIREBASE CONFIGURATION
+// FIREBASE CONFIG
 // ═══════════════════════════════════════════════════════════
 const FB_CONFIG = {
   apiKey:            "AIzaSyAVKGyPWWQzEWfwkOwhwXabD3HbuLQz-qA",
@@ -27,16 +27,15 @@ const FB_CONFIG = {
   appId:             "1:1015529457316:web:2e90bfaacbd515a44208d7"
 };
 
-// ✅ Firebase অ্যাপ তৈরি করা হচ্ছে
 const app = initializeApp(FB_CONFIG);
 const auth = getAuth(app);
 const db = getDatabase(app);
 const gProvider = new GoogleAuthProvider();
 
-console.log('🔥 Firebase initialized:', app.name, '— Project:', FB_CONFIG.projectId);
+console.log('🔥 ChatCity Firebase Initialized:', app.name);
 
 // ═══════════════════════════════════════════════════════════
-// CONSTANTS
+// CONSTANTS & UTILS
 // ═══════════════════════════════════════════════════════════
 const ADMIN_EMAIL  = 'admin@chatcity.com';
 const ADMIN_UID    = 'admin_system_001';
@@ -65,13 +64,15 @@ const toast = (msg, type='') => {
 };
 
 // ═══════════════════════════════════════════════════════════
-// SESSION
+// SESSION & NAVIGATION
 // ═══════════════════════════════════════════════════════════
 const SESSION_KEY = 'cc_session';
 const saveSession  = (uid,p) => localStorage.setItem(SESSION_KEY,JSON.stringify({uid,passcode:p,ts:Date.now()}));
 const getSession   = ()      => { try{return JSON.parse(localStorage.getItem(SESSION_KEY));}catch{return null;} };
 const clearSession = ()      => localStorage.removeItem(SESSION_KEY);
 const go = (page) => { window.location.href = page; };
+// গ্লোবালি এক্সপোজ (জরুরি)
+window.go = go;
 
 const setOnline = async uid => {
   try {
@@ -83,6 +84,41 @@ const setOnline = async uid => {
 };
 
 const isAppOnline = ()=>navigator.onLine;
+
+// ═══════════════════════════════════════════════════════════
+// FCM & PUSH NOTIFICATIONS (initFCM added)
+// ═══════════════════════════════════════════════════════════
+const initFCM = async (uid) => {
+  try {
+    if(!('serviceWorker' in navigator)) return console.warn('No SW support');
+    // নোটিফিকেশন পারমিশন চাওয়া
+    if(Notification.permission === 'default') await Notification.requestPermission();
+    if(Notification.permission !== 'granted') return;
+
+    const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js');
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    if(token) {
+      await set(ref(db,`users/${uid}/fcmToken`), token);
+      console.log('📱 FCM Token registered');
+    }
+  } catch(e) { console.warn('FCM init error:', e); }
+};
+
+const sendPushToUser = async (receiverUid, title, body, url='home.html') => {
+  try {
+    const snap = await get(ref(db,`users/${receiverUid}`));
+    const u = snap.val();
+    if(!u || u.online) return;
+    const token = u.fcmToken;
+    if(!token) return;
+    await fetch(`${BACKEND_URL}/api/sendPush`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ token, title, body, url })
+    });
+  } catch(e){}
+};
 
 // ═══════════════════════════════════════════════════════════
 // FRIEND CODE & SEARCH
@@ -169,31 +205,10 @@ const isAdmin = async (uid) => {
 };
 
 // ═══════════════════════════════════════════════════════════
-// PUSH NOTIFICATIONS
-// ═══════════════════════════════════════════════════════════
-const sendPushToUser = async (receiverUid, title, body, url='home.html') => {
-  try {
-    const snap = await get(ref(db,`users/${receiverUid}`));
-    const u = snap.val();
-    if(!u || u.online) return;
-    const token = u.fcmToken;
-    if(!token) return;
-    await fetch(`${BACKEND_URL}/api/sendPush`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ token, title, body, url })
-    });
-  } catch(e){ console.warn('Push send failed:', e); }
-};
-
-// ═══════════════════════════════════════════════════════════
-// VALIDATION
+// VALIDATION & OFFLINE
 // ═══════════════════════════════════════════════════════════
 const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 
-// ═══════════════════════════════════════════════════════════
-// OFFLINE QUEUE (Stub)
-// ═══════════════════════════════════════════════════════════
 const addToOfflineQueue = (cid, msg) => {
   try {
     const q = JSON.parse(localStorage.getItem('cc_msg_queue')||'{}');
@@ -204,17 +219,18 @@ const addToOfflineQueue = (cid, msg) => {
 };
 
 // ═══════════════════════════════════════════════════════════
-// EXPORTS
+// EXPORTS (সব কিছু এক্সপোর্ট করা হলো)
 // ═══════════════════════════════════════════════════════════
 export {
   app, auth, db, gProvider, VAPID_KEY, VERIFIED_BADGE, BACKEND_URL,
   colorFor, initialsOf, chatId, fmtTime, fmtDate, escHtml, toast,
   saveSession, getSession, clearSession, go, setOnline, isAppOnline,
+  initFCM, sendPushToUser,                                     // ✅ FCM ফাংশন
   generateUserCode, findUserByCode, addFriendByCode,
   createUserSearchIndex, searchUsers, getAllUsers,
   deleteUserSearchIndex, updateUserSearchIndex,
   addToOfflineQueue, setVerifiedBadge, banUser, sendSystemMessage, isAdmin,
-  sendPushToUser, validateEmail,
+  validateEmail,
   ref, set, get, push, onValue, off, remove, update,
   serverTimestamp, onDisconnect, query, orderByChild, equalTo,
   signOut, onAuthStateChanged, updateProfile, updatePassword,
