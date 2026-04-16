@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ChatCity — Admin Panel</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+.admin-tabs { display:flex; gap:4px; padding:12px 12px 0; background:var(--bg2); }
+.tab-btn { flex:1; padding:12px; background:var(--bg3); border:none; border-radius:12px 12px 0 0; color:var(--text2); font-weight:700; cursor:pointer; }
+.tab-btn.active { background:var(--bg); color:var(--accent); border-bottom:2px solid var(--accent); }
+.tab-content { padding:16px; }
+.user-table { width:100%; border-collapse:collapse; font-size:13px; }
+.user-table th { text-align:left; padding:10px 8px; color:var(--text2); border-bottom:1px solid var(--border); }
+.user-table td { padding:12px 8px; border-bottom:1px solid var(--border); }
+.action-btn { background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:6px 10px; margin:2px; cursor:pointer; font-size:12px; }
+.action-btn.danger { color:var(--red); border-color:var(--red); }
+.online-dot-admin { width:10px; height:10px; border-radius:50%; background:var(--green); display:inline-block; margin-right:5px; }
+.offline-dot { background:var(--text3); }
+.search-box { margin-bottom:16px; }
+.conversation-view { background:var(--bg3); border-radius:12px; padding:16px; max-height:400px; overflow-y:auto; margin-top:16px; }
+.msg-admin { padding:8px 12px; margin:4px 0; border-radius:12px; background:var(--bg4); }
+</style>
+</head>
+<body>
+<div id="toast"></div>
+<div id="root">
+  <div class="topbar">
+    <button class="back-btn btn" onclick="go('profile.html')"><i class="fas fa-arrow-left"></i></button>
+    <div class="topbar-title"><i class="fas fa-shield-halved" style="color:var(--yellow);"></i> Admin Panel</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="admin-tabs">
+    <button class="tab-btn active" data-tab="users">👥 Users</button>
+    <button class="tab-btn" data-tab="communications">💬 Communications</button>
+    <button class="tab-btn" data-tab="online">🟢 Online</button>
+  </div>
+  <div class="tab-content" id="tab-users">
+    <div class="search-box">
+      <input type="text" id="user-search" class="inp" placeholder="Search by name/email/code..." oninput="filterUsers()">
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="user-table" id="users-table">
+        <thead><tr><th>User</th><th>Code</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="tab-content hidden" id="tab-communications">
+    <div class="search-box">
+      <input type="text" id="comm-search" class="inp" placeholder="Select user to view conversation..." oninput="searchUsersForComm()">
+    </div>
+    <div id="user-select-list"></div>
+    <div id="conversation-container" class="hidden">
+      <h4>Conversation with <span id="conv-with"></span></h4>
+      <div class="conversation-view" id="conv-messages"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <input type="text" id="admin-msg-inp" class="inp" placeholder="Send violation message...">
+        <button class="btn btn-primary" onclick="sendAdminMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+  <div class="tab-content hidden" id="tab-online">
+    <div id="online-users-list"></div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  auth, db, ref, get, set, push, onValue, onAuthStateChanged,
+  go, toast, getAllUsers, setVerifiedBadge, banUser, sendSystemMessage, isAdmin,
+  ADMIN_UID, BACKEND_URL, colorFor, initialsOf, generateUserCode, chatId
+} from './firebase.js';
+
+let me = null;
+let allUsersData = [];
+let selectedUserId = null;
+
+onAuthStateChanged(auth, async user => {
+  if(!user) return go('index.html');
+  if(!await isAdmin(user.uid) && user.email!=='admin@chatcity.com') {
+    toast('Access denied', 'error');
+    return go('profile.html');
+  }
+  me = user;
+  initTabs();
+  loadAllUsers();
+  loadOnlineUsers();
+});
+
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      document.getElementById('tab-users').classList.toggle('hidden', tab!=='users');
+      document.getElementById('tab-communications').classList.toggle('hidden', tab!=='communications');
+      document.getElementById('tab-online').classList.toggle('hidden', tab!=='online');
+    });
+  });
+}
+
+async function loadAllUsers() {
+  allUsersData = await getAllUsers();
+  for(const u of allUsersData) {
+    const banSnap = await get(ref(db,`admin/banned/${u.uid}`));
+    u.banned = banSnap.val() === true;
+  }
+  renderUsersTable(allUsersData);
+}
+
+function renderUsersTable(users) {
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span>${u.name||'?'}</span>
+          ${u.verified?`<img src="https://i.ibb.co/W4fjDGmD/32539-removebg-preview.png" style="width:14px;">`:''}
+        </div>
+        <small style="color:var(--text2);">${u.email}</small>
+      </td>
+      <td><code>${u.friendCode}</code></td>
+      <td>
+        <span class="online-dot-admin ${u.online?'':'offline-dot'}"></span>
+        ${u.online?'Online':'Offline'}<br>
+        <small>${u.passcodeSet?'PIN ✓':'No PIN'}</small>
+      </td>
+      <td>${u.joinDate}</td>
+      <td>
+        <button class="action-btn" onclick="window.sendMsgToUser('${u.uid}')"><i class="fas fa-paper-plane"></i></button>
+        <button class="action-btn" onclick="window.toggleVerify('${u.uid}', ${!u.verified})">${u.verified?'✅':'☑️'}</button>
+        <button class="action-btn" onclick="window.warnUser('${u.uid}')"><i class="fas fa-exclamation"></i></button>
+        <button class="action-btn danger" onclick="window.toggleBan('${u.uid}', ${!u.banned})">${u.banned?'🔓':'🔒'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.filterUsers = () => {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  const filtered = allUsersData.filter(u => 
+    u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.friendCode?.toLowerCase().includes(q)
+  );
+  renderUsersTable(filtered);
+};
+
+window.sendMsgToUser = async (uid) => {
+  const msg = prompt('Enter message to send as admin:');
+  if(!msg) return;
+  await sendSystemMessage(ADMIN_UID, uid, `[Admin] ${msg}`);
+  toast('Message sent');
+};
+
+window.toggleVerify = async (uid, val) => {
+  await setVerifiedBadge(uid, val);
+  toast(`User ${val?'verified':'unverified'}`);
+  loadAllUsers();
+};
+
+window.warnUser = async (uid) => {
+  const reason = prompt('Warning message:');
+  if(!reason) return;
+  await push(ref(db,`users/${uid}/warnings`), { reason, ts: Date.now() });
+  toast('Warning sent');
+};
+
+window.toggleBan = async (uid, ban) => {
+  await banUser(uid, ban);
+  toast(`User ${ban?'banned':'unbanned'}`);
+  loadAllUsers();
+};
+
+// Communications Tab
+window.searchUsersForComm = async () => {
+  const q = document.getElementById('comm-search').value.trim();
+  if(!q) { document.getElementById('user-select-list').innerHTML=''; return; }
+  const { searchUsers } = await import('./firebase.js');
+  const results = await searchUsers(q);
+  const list = document.getElementById('user-select-list');
+  list.innerHTML = results.map(u => `
+    <div class="list-item" onclick="selectUserForComm('${u.uid}','${u.name}')">
+      <span>${u.name} (${u.email})</span>
+      <i class="fas fa-chevron-right"></i>
+    </div>
+  `).join('');
+};
+
+window.selectUserForComm = async (uid, name) => {
+  selectedUserId = uid;
+  document.getElementById('conv-with').textContent = name;
+  document.getElementById('conversation-container').classList.remove('hidden');
+  const cid = chatId(ADMIN_UID, uid);
+  onValue(ref(db,`chats/${cid}/messages`), snap => {
+    const msgs = snap.val() || {};
+    const sorted = Object.values(msgs).sort((a,b)=>a.ts-b.ts);
+    const html = sorted.map(m => `
+      <div class="msg-admin">
+        <strong>${m.senderId===ADMIN_UID?'Admin':name}:</strong> ${m.text||'📎 media'}<br>
+        <small>${new Date(m.ts).toLocaleTimeString()}</small>
+      </div>
+    `).join('');
+    document.getElementById('conv-messages').innerHTML = html || '<i>No messages</i>';
+  });
+};
+
+window.sendAdminMessage = async () => {
+  const inp = document.getElementById('admin-msg-inp');
+  const text = inp.value.trim();
+  if(!text || !selectedUserId) return;
+  await sendSystemMessage(ADMIN_UID, selectedUserId, `[Admin] ${text}`);
+  inp.value = '';
+  toast('Sent');
+};
+
+// Online Users Tab
+function loadOnlineUsers() {
+  onValue(ref(db,'users'), snap => {
+    const users = snap.val() || {};
+    const online = Object.entries(users).filter(([_,u])=>u.online);
+    const list = document.getElementById('online-users-list');
+    list.innerHTML = online.map(([uid,u]) => `
+      <div class="list-item">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span class="online-dot-admin"></span>
+          <div>${u.name||'User'} (${u.email})</div>
+        </div>
+        <small>${u.friendCode||''}</small>
+      </div>
+    `).join('') || '<p>No online users</p>';
+  });
+}
+
+window.go = go;
+</script>
+</body>
+</html>
