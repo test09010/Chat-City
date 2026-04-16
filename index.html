@@ -73,13 +73,13 @@ body { display:flex;align-items:center;justify-content:center;padding:20px;overf
         <label class="form-label"><i class="fas fa-lock"></i> Password</label>
         <div class="inp-wrap">
           <input class="inp" type="password" id="l-pass" placeholder="••••••••" autocomplete="current-password">
-          <button class="inp-eye" onclick="window.togglePw('l-pass',this)"><i class="fas fa-eye"></i></button>
+          <button class="inp-eye" id="toggle-l-pass"><i class="fas fa-eye"></i></button>
         </div>
-        <div class="forgot-link"><a onclick="window.showForgot()"><i class="fas fa-key"></i> Forgot Password?</a></div>
+        <div class="forgot-link"><a id="forgot-link"><i class="fas fa-key"></i> Forgot Password?</a></div>
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="login-btn" onclick="window.doLogin()"><i class="fas fa-sign-in-alt"></i> Login</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:10px;" id="login-btn"><i class="fas fa-sign-in-alt"></i> Login</button>
       <div class="divider">or</div>
-      <button class="google-btn" onclick="window.doGoogle()"><i class="fab fa-google"></i> Continue with Google</button>
+      <button class="google-btn" id="google-login-btn"><i class="fab fa-google"></i> Continue with Google</button>
       <div class="errmsg" id="l-err"></div>
     </div>
 
@@ -101,7 +101,7 @@ body { display:flex;align-items:center;justify-content:center;padding:20px;overf
         <label class="form-label"><i class="fas fa-lock"></i> Password</label>
         <div class="inp-wrap">
           <input class="inp" type="password" id="s-pass" placeholder="Min 6 characters" autocomplete="new-password">
-          <button class="inp-eye" onclick="window.togglePw('s-pass',this)"><i class="fas fa-eye"></i></button>
+          <button class="inp-eye" id="toggle-s-pass"><i class="fas fa-eye"></i></button>
         </div>
       </div>
       <div class="form-group">
@@ -109,9 +109,9 @@ body { display:flex;align-items:center;justify-content:center;padding:20px;overf
         <input class="inp" type="text" id="s-pin" placeholder="e.g. 1234" maxlength="4" pattern="\d{4}" inputmode="numeric">
         <div style="font-size:11px;color:var(--text3);margin-top:5px;"><i class="fas fa-info-circle"></i> Remember this PIN — required each login</div>
       </div>
-      <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="signup-btn" onclick="window.doSignup()"><i class="fas fa-user-plus"></i> Create Account</button>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px;" id="signup-btn"><i class="fas fa-user-plus"></i> Create Account</button>
       <div class="divider">or</div>
-      <button class="google-btn" onclick="window.doGoogle()"><i class="fab fa-google"></i> Continue with Google</button>
+      <button class="google-btn" id="google-signup-btn"><i class="fab fa-google"></i> Continue with Google</button>
       <div class="errmsg" id="s-err"></div>
     </div>
   </div>
@@ -128,14 +128,14 @@ body { display:flex;align-items:center;justify-content:center;padding:20px;overf
       <div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div><div class="pin-dot"></div>
     </div>
     <div class="pin-keypad">
-      <button class="pin-key" onclick="window.pinKey('1')">1</button><button class="pin-key" onclick="window.pinKey('2')">2</button><button class="pin-key" onclick="window.pinKey('3')">3</button>
-      <button class="pin-key" onclick="window.pinKey('4')">4</button><button class="pin-key" onclick="window.pinKey('5')">5</button><button class="pin-key" onclick="window.pinKey('6')">6</button>
-      <button class="pin-key" onclick="window.pinKey('7')">7</button><button class="pin-key" onclick="window.pinKey('8')">8</button><button class="pin-key" onclick="window.pinKey('9')">9</button>
-      <button class="pin-key empty"></button><button class="pin-key" onclick="window.pinKey('0')">0</button>
-      <button class="pin-key backspace" onclick="window.pinKey('⌫')"><i class="fas fa-delete-left"></i></button>
+      <button class="pin-key" data-key="1">1</button><button class="pin-key" data-key="2">2</button><button class="pin-key" data-key="3">3</button>
+      <button class="pin-key" data-key="4">4</button><button class="pin-key" data-key="5">5</button><button class="pin-key" data-key="6">6</button>
+      <button class="pin-key" data-key="7">7</button><button class="pin-key" data-key="8">8</button><button class="pin-key" data-key="9">9</button>
+      <button class="pin-key empty"></button><button class="pin-key" data-key="0">0</button>
+      <button class="pin-key backspace" data-key="⌫"><i class="fas fa-delete-left"></i></button>
     </div>
     <div class="errmsg" id="pin-err" style="margin-top:14px;"></div>
-    <button onclick="window.doLogout()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;margin-top:16px;width:100%;text-align:center;font-family:var(--font);">
+    <button id="logout-btn-modal" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;margin-top:16px;width:100%;text-align:center;font-family:var(--font);">
       <i class="fas fa-sign-out-alt"></i> Logout and use different account
     </button>
   </div>
@@ -151,9 +151,9 @@ body { display:flex;align-items:center;justify-content:center;padding:20px;overf
       <input class="inp" type="email" id="fp-email" placeholder="you@example.com">
       <span class="email-status" id="fp-es"></span>
     </div>
-    <button class="btn btn-primary" style="width:100%;" id="fp-btn" onclick="window.sendForgotPw()"><i class="fas fa-paper-plane"></i> Send Reset Link</button>
+    <button class="btn btn-primary" style="width:100%;" id="fp-btn"><i class="fas fa-paper-plane"></i> Send Reset Link</button>
     <div id="fp-msg" style="margin-top:12px;text-align:center;font-size:13px;min-height:18px;"></div>
-    <button onclick="document.getElementById('fp-modal').classList.remove('show')" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;margin-top:14px;width:100%;text-align:center;font-family:var(--font);">
+    <button id="close-fp-modal" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;margin-top:14px;width:100%;text-align:center;font-family:var(--font);">
       <i class="fas fa-arrow-left"></i> Back to Login
     </button>
   </div>
@@ -163,6 +163,7 @@ body { display:flex;align-items:center;justify-content:center;padding:20px;overf
 <script>eruda.init();</script>
 
 <script type="module">
+// সমস্ত ইম্পোর্ট এক জায়গায়
 import {
   auth, db, gProvider, ref, set, get,
   signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword,
@@ -171,109 +172,11 @@ import {
   createUserSearchIndex, validateEmail
 } from './firebase.js';
 
+// গ্লোবাল ভ্যারিয়েবল
 let pendingUser = null, pinEntered = '';
 let emailCache = {}, emailTimers = {};
 
-// ==== Global Functions ====
-window.switchTab = (tab) => {
-  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
-  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
-  document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
-  document.getElementById('form-signup').classList.toggle('hidden', tab !== 'signup');
-  document.getElementById('l-err').textContent = '';
-  document.getElementById('s-err').textContent = '';
-};
-
-window.togglePw = (id, btn) => {
-  const inp = document.getElementById(id);
-  const isHidden = inp.type === 'password';
-  inp.type = isHidden ? 'text' : 'password';
-  btn.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-};
-
-window.showForgot = () => {
-  document.getElementById('fp-modal').classList.add('show');
-  document.getElementById('fp-email').value = document.getElementById('l-email').value;
-  document.getElementById('fp-msg').innerHTML = '';
-  document.getElementById('fp-es').innerHTML = '';
-};
-
-window.doLogin = async () => {
-  const email = document.getElementById('l-email').value.trim();
-  const pass = document.getElementById('l-pass').value;
-  const errEl = document.getElementById('l-err');
-  const btn = document.getElementById('login-btn');
-  if (!email || !pass) { errEl.textContent = 'Please fill in all fields'; return; }
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in…'; btn.disabled = true; errEl.textContent = '';
-  try {
-    const cred = await signInWithEmailAndPassword(auth, email, pass);
-    await afterAuth(cred.user);
-  } catch (e) {
-    errEl.textContent = e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password' ? '❌ Wrong email or password' : e.message;
-  } finally { btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login'; btn.disabled = false; }
-};
-
-window.doSignup = async () => {
-  const name = document.getElementById('s-name').value.trim();
-  const email = document.getElementById('s-email').value.trim();
-  const pass = document.getElementById('s-pass').value;
-  const pin = document.getElementById('s-pin').value.trim();
-  const errEl = document.getElementById('s-err');
-  const btn = document.getElementById('signup-btn');
-  if (!name || !email || !pass) { errEl.textContent = 'Please fill in all fields'; return; }
-  if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; return; }
-  if (pin && (pin.length !== 4 || !/^\d{4}$/.test(pin))) { errEl.textContent = 'Passcode must be exactly 4 digits'; return; }
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…'; btn.disabled = true; errEl.textContent = '';
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    await updateProfile(cred.user, { displayName: name });
-    const userData = { uid: cred.user.uid, name, email, initials: initialsOf(name), color: colorFor(cred.user.uid), photo: '', passcode: pin || '', online: false, createdAt: Date.now(), lastVisit: Date.now() };
-    await set(ref(db, `users/${cred.user.uid}`), userData);
-    await createUserSearchIndex(cred.user.uid, userData);
-    saveSession(cred.user.uid, pin || '');
-    go('home.html');
-  } catch (e) {
-    errEl.textContent = e.code === 'auth/email-already-in-use' ? 'This email is already registered' : e.message;
-  } finally { btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account'; btn.disabled = false; }
-};
-
-window.doGoogle = async () => {
-  try {
-    const result = await signInWithPopup(auth, gProvider);
-    await afterAuth(result.user);
-  } catch (e) { document.getElementById('l-err').textContent = e.message; }
-};
-
-window.sendForgotPw = async () => {
-  const email = document.getElementById('fp-email').value.trim();
-  const msgEl = document.getElementById('fp-msg');
-  const btn = document.getElementById('fp-btn');
-  if (!email) { msgEl.innerHTML = '<span style="color:var(--red);">Please enter your email</span>'; return; }
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…'; btn.disabled = true;
-  try {
-    await sendPasswordResetEmail(auth, email);
-    msgEl.innerHTML = '<span style="color:var(--green);"><i class="fas fa-circle-check"></i> Reset link sent! Check your inbox.</span>';
-    toast('Password reset email sent! 📧', 'ok');
-  } catch (e) {
-    msgEl.innerHTML = `<span style="color:var(--red);"><i class="fas fa-triangle-exclamation"></i> ${e.message}</span>`;
-  } finally { btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Reset Link'; btn.disabled = false; }
-};
-
-window.pinKey = (k) => {
-  if (k === '⌫') pinEntered = pinEntered.slice(0, -1);
-  else if (k !== '' && pinEntered.length < 4) pinEntered += String(k);
-  updateDots();
-  if (pinEntered.length === 4) setTimeout(checkPin, 120);
-};
-
-window.doLogout = async () => {
-  clearSession();
-  try { await signOut(auth); } catch {}
-  document.getElementById('passcode-modal').classList.remove('show');
-  pendingUser = null; pinEntered = '';
-};
-
-// ==== Helper Functions ====
+// ---------- হেল্পার ফাংশন ----------
 async function validateEmailCached(email) {
   if (emailCache[email] !== undefined) return emailCache[email];
   const ok = validateEmail(email);
@@ -297,7 +200,10 @@ async function checkPin() {
     updateDots(true);
     document.getElementById('pin-err').textContent = '❌ Wrong passcode. Try again.';
     pinEntered = '';
-    setTimeout(() => { updateDots(false); document.getElementById('pin-err').textContent = ''; }, 900);
+    setTimeout(() => {
+      updateDots(false);
+      document.getElementById('pin-err').textContent = '';
+    }, 900);
   }
 }
 
@@ -331,11 +237,123 @@ async function afterAuth(user) {
   }
 }
 
-// Email check (attached to inputs)
-document.getElementById('l-email').addEventListener('input', function() { schedEmailCheck('l-email', 'l-es'); });
-document.getElementById('s-email').addEventListener('input', function() { schedEmailCheck('s-email', 's-es'); });
-document.getElementById('fp-email').addEventListener('input', function() { schedEmailCheck('fp-email', 'fp-es'); });
+// ---------- UI ফাংশন (window এ এক্সপোজ করা) ----------
+window.switchTab = (tab) => {
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+  document.getElementById('form-login').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('form-signup').classList.toggle('hidden', tab !== 'signup');
+  document.getElementById('l-err').textContent = '';
+  document.getElementById('s-err').textContent = '';
+};
 
+window.togglePassword = (inputId, btnIcon) => {
+  const inp = document.getElementById(inputId);
+  const isHidden = inp.type === 'password';
+  inp.type = isHidden ? 'text' : 'password';
+  btnIcon.innerHTML = isHidden ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+};
+
+window.showForgot = () => {
+  document.getElementById('fp-modal').classList.add('show');
+  document.getElementById('fp-email').value = document.getElementById('l-email').value;
+  document.getElementById('fp-msg').innerHTML = '';
+  document.getElementById('fp-es').innerHTML = '';
+};
+
+window.doLogin = async () => {
+  const email = document.getElementById('l-email').value.trim();
+  const pass = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('l-err');
+  const btn = document.getElementById('login-btn');
+  if (!email || !pass) { errEl.textContent = 'Please fill in all fields'; return; }
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in…'; btn.disabled = true; errEl.textContent = '';
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    await afterAuth(cred.user);
+  } catch (e) {
+    errEl.textContent = (e.code === 'auth/user-not-found' || e.code === 'auth/wrong-password')
+      ? '❌ Wrong email or password' : e.message;
+  } finally {
+    btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login'; btn.disabled = false;
+  }
+};
+
+window.doSignup = async () => {
+  const name = document.getElementById('s-name').value.trim();
+  const email = document.getElementById('s-email').value.trim();
+  const pass = document.getElementById('s-pass').value;
+  const pin = document.getElementById('s-pin').value.trim();
+  const errEl = document.getElementById('s-err');
+  const btn = document.getElementById('signup-btn');
+  if (!name || !email || !pass) { errEl.textContent = 'Please fill in all fields'; return; }
+  if (pass.length < 6) { errEl.textContent = 'Password must be at least 6 characters'; return; }
+  if (pin && (pin.length !== 4 || !/^\d{4}$/.test(pin))) { errEl.textContent = 'Passcode must be exactly 4 digits'; return; }
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating…'; btn.disabled = true; errEl.textContent = '';
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(cred.user, { displayName: name });
+    const userData = {
+      uid: cred.user.uid, name, email,
+      initials: initialsOf(name), color: colorFor(cred.user.uid),
+      photo: '', passcode: pin || '', online: false,
+      createdAt: Date.now(), lastVisit: Date.now()
+    };
+    await set(ref(db, `users/${cred.user.uid}`), userData);
+    await createUserSearchIndex(cred.user.uid, userData);
+    saveSession(cred.user.uid, pin || '');
+    go('home.html');
+  } catch (e) {
+    errEl.textContent = e.code === 'auth/email-already-in-use'
+      ? 'This email is already registered' : e.message;
+  } finally {
+    btn.innerHTML = '<i class="fas fa-user-plus"></i> Create Account'; btn.disabled = false;
+  }
+};
+
+window.doGoogle = async () => {
+  try {
+    const result = await signInWithPopup(auth, gProvider);
+    await afterAuth(result.user);
+  } catch (e) {
+    document.getElementById('l-err').textContent = e.message;
+  }
+};
+
+window.sendForgotPw = async () => {
+  const email = document.getElementById('fp-email').value.trim();
+  const msgEl = document.getElementById('fp-msg');
+  const btn = document.getElementById('fp-btn');
+  if (!email) { msgEl.innerHTML = '<span style="color:var(--red);">Please enter your email</span>'; return; }
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending…'; btn.disabled = true;
+  try {
+    await sendPasswordResetEmail(auth, email);
+    msgEl.innerHTML = '<span style="color:var(--green);"><i class="fas fa-circle-check"></i> Reset link sent! Check your inbox.</span>';
+    toast('Password reset email sent! 📧', 'ok');
+  } catch (e) {
+    msgEl.innerHTML = `<span style="color:var(--red);"><i class="fas fa-triangle-exclamation"></i> ${e.message}</span>`;
+  } finally {
+    btn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Reset Link'; btn.disabled = false;
+  }
+};
+
+window.pinKey = (k) => {
+  if (k === '⌫') pinEntered = pinEntered.slice(0, -1);
+  else if (k !== '' && pinEntered.length < 4) pinEntered += String(k);
+  updateDots();
+  if (pinEntered.length === 4) setTimeout(checkPin, 120);
+};
+
+window.doLogout = async () => {
+  clearSession();
+  try { await signOut(auth); } catch {}
+  document.getElementById('passcode-modal').classList.remove('show');
+  pendingUser = null; pinEntered = '';
+};
+
+window.go = go;
+
+// ---------- ইমেইল চেক ----------
 function schedEmailCheck(inpId, stId) {
   const val = document.getElementById(inpId).value.trim();
   const st = document.getElementById(stId);
@@ -346,34 +364,73 @@ function schedEmailCheck(inpId, stId) {
     const ok = await validateEmailCached(val);
     st.innerHTML = ok ? '<i class="fas fa-circle-check email-ok"></i>' : '<i class="fas fa-circle-xmark email-bad"></i>';
     if (inpId === 's-email') {
-      const hint = document.getElementById('s-email-hint');
-      hint.innerHTML = ok ? '' : '<span style="color:var(--red);font-size:11px;"><i class="fas fa-triangle-exclamation"></i> Invalid email address.</span>';
+      document.getElementById('s-email-hint').innerHTML = ok ? '' : '<span style="color:var(--red);font-size:11px;"><i class="fas fa-triangle-exclamation"></i> Invalid email address.</span>';
     }
   }, 800);
 }
 
-// Modal close on overlay click
-document.getElementById('fp-modal').addEventListener('click', e => { if (e.target.id === 'fp-modal') e.target.classList.remove('show'); });
+// ---------- ইভেন্ট লিসেনার সেটাপ ----------
+document.addEventListener('DOMContentLoaded', () => {
+  // ট্যাব সুইচ
+  document.getElementById('tab-login').addEventListener('click', () => window.switchTab('login'));
+  document.getElementById('tab-signup').addEventListener('click', () => window.switchTab('signup'));
 
-onAuthStateChanged(auth, user => {
-  if (user) { const sess = getSession(); if (sess && sess.uid === user.uid) go('home.html'); }
+  // পাসওয়ার্ড টগল
+  document.getElementById('toggle-l-pass').addEventListener('click', function() {
+    window.togglePassword('l-pass', this);
+  });
+  document.getElementById('toggle-s-pass').addEventListener('click', function() {
+    window.togglePassword('s-pass', this);
+  });
+
+  // ফরগট পাসওয়ার্ড
+  document.getElementById('forgot-link').addEventListener('click', window.showForgot);
+
+  // লগইন/সাইনআপ বাটন
+  document.getElementById('login-btn').addEventListener('click', window.doLogin);
+  document.getElementById('signup-btn').addEventListener('click', window.doSignup);
+  document.getElementById('google-login-btn').addEventListener('click', window.doGoogle);
+  document.getElementById('google-signup-btn').addEventListener('click', window.doGoogle);
+
+  // ফরগট মডেল
+  document.getElementById('fp-btn').addEventListener('click', window.sendForgotPw);
+  document.getElementById('close-fp-modal').addEventListener('click', () => {
+    document.getElementById('fp-modal').classList.remove('show');
+  });
+  document.getElementById('fp-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'fp-modal') e.target.classList.remove('show');
+  });
+
+  // পিন কীপ্যাড
+  document.querySelectorAll('.pin-key[data-key]').forEach(btn => {
+    btn.addEventListener('click', () => window.pinKey(btn.dataset.key));
+  });
+  document.getElementById('logout-btn-modal').addEventListener('click', window.doLogout);
+
+  // ইমেইল ইনপুট
+  document.getElementById('l-email').addEventListener('input', () => schedEmailCheck('l-email', 'l-es'));
+  document.getElementById('s-email').addEventListener('input', () => schedEmailCheck('s-email', 's-es'));
+  document.getElementById('fp-email').addEventListener('input', () => schedEmailCheck('fp-email', 'fp-es'));
+
+  // এন্টার কী
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    if (document.getElementById('fp-modal').classList.contains('show')) {
+      window.sendForgotPw();
+      return;
+    }
+    const isLogin = document.getElementById('tab-login').classList.contains('active');
+    if (isLogin) window.doLogin(); else window.doSignup();
+  });
+
+  // অথ স্টেট চেক
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      const sess = getSession();
+      if (sess && sess.uid === user.uid) go('home.html');
+    }
+  });
 });
-
-// Set up tab listeners
-document.getElementById('tab-login').addEventListener('click', () => window.switchTab('login'));
-document.getElementById('tab-signup').addEventListener('click', () => window.switchTab('signup'));
-
-// Enter key handler
-document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  if (document.getElementById('fp-modal').classList.contains('show')) { window.sendForgotPw(); return; }
-  const isLogin = document.getElementById('tab-login').classList.contains('active');
-  if (isLogin) window.doLogin(); else window.doSignup();
-});
-
-window.go = go;
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 </body>
 </html>
