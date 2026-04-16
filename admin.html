@@ -27,18 +27,18 @@
 <div id="toast"></div>
 <div id="root">
   <div class="topbar">
-    <button class="back-btn btn" onclick="go('profile.html')"><i class="fas fa-arrow-left"></i></button>
+    <button class="back-btn btn" onclick="window.go('profile.html')"><i class="fas fa-arrow-left"></i></button>
     <div class="topbar-title"><i class="fas fa-shield-halved" style="color:var(--yellow);"></i> Admin Panel</div>
     <div style="width:38px;"></div>
   </div>
   <div class="admin-tabs">
-    <button class="tab-btn active" data-tab="users">👥 Users</button>
-    <button class="tab-btn" data-tab="communications">💬 Communications</button>
-    <button class="tab-btn" data-tab="online">🟢 Online</button>
+    <button class="tab-btn active" id="tab-users-btn">👥 Users</button>
+    <button class="tab-btn" id="tab-communications-btn">💬 Communications</button>
+    <button class="tab-btn" id="tab-online-btn">🟢 Online</button>
   </div>
   <div class="tab-content" id="tab-users">
     <div class="search-box">
-      <input type="text" id="user-search" class="inp" placeholder="Search by name/email/code..." oninput="filterUsers()">
+      <input type="text" id="user-search" class="inp" placeholder="Search by name/email/code..." oninput="window.filterUsers()">
     </div>
     <div style="overflow-x:auto;">
       <table class="user-table" id="users-table">
@@ -49,7 +49,7 @@
   </div>
   <div class="tab-content hidden" id="tab-communications">
     <div class="search-box">
-      <input type="text" id="comm-search" class="inp" placeholder="Select user to view conversation..." oninput="searchUsersForComm()">
+      <input type="text" id="comm-search" class="inp" placeholder="Select user to view conversation..." oninput="window.searchUsersForComm()">
     </div>
     <div id="user-select-list"></div>
     <div id="conversation-container" class="hidden">
@@ -57,7 +57,7 @@
       <div class="conversation-view" id="conv-messages"></div>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <input type="text" id="admin-msg-inp" class="inp" placeholder="Send violation message...">
-        <button class="btn btn-primary" onclick="sendAdminMessage()">Send</button>
+        <button class="btn btn-primary" onclick="window.sendAdminMessage()">Send</button>
       </div>
     </div>
   </div>
@@ -66,83 +66,26 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+
 <script type="module">
 import {
   auth, db, ref, get, set, push, onValue, onAuthStateChanged,
   go, toast, getAllUsers, setVerifiedBadge, banUser, sendSystemMessage, isAdmin,
-  ADMIN_UID, BACKEND_URL, colorFor, initialsOf, generateUserCode, chatId
+  ADMIN_UID, colorFor, initialsOf, generateUserCode, chatId
 } from './firebase.js';
 
 let me = null;
 let allUsersData = [];
 let selectedUserId = null;
 
-onAuthStateChanged(auth, async user => {
-  if(!user) return go('index.html');
-  if(!await isAdmin(user.uid) && user.email!=='admin@chatcity.com') {
-    toast('Access denied', 'error');
-    return go('profile.html');
-  }
-  me = user;
-  initTabs();
-  loadAllUsers();
-  loadOnlineUsers();
-});
-
-function initTabs() {
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-      btn.classList.add('active');
-      const tab = btn.dataset.tab;
-      document.getElementById('tab-users').classList.toggle('hidden', tab!=='users');
-      document.getElementById('tab-communications').classList.toggle('hidden', tab!=='communications');
-      document.getElementById('tab-online').classList.toggle('hidden', tab!=='online');
-    });
-  });
-}
-
-async function loadAllUsers() {
-  allUsersData = await getAllUsers();
-  for(const u of allUsersData) {
-    const banSnap = await get(ref(db,`admin/banned/${u.uid}`));
-    u.banned = banSnap.val() === true;
-  }
-  renderUsersTable(allUsersData);
-}
-
-function renderUsersTable(users) {
-  const tbody = document.getElementById('users-tbody');
-  tbody.innerHTML = users.map(u => `
-    <tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span>${u.name||'?'}</span>
-          ${u.verified?`<img src="https://i.ibb.co/W4fjDGmD/32539-removebg-preview.png" style="width:14px;">`:''}
-        </div>
-        <small style="color:var(--text2);">${u.email}</small>
-      </td>
-      <td><code>${u.friendCode}</code></td>
-      <td>
-        <span class="online-dot-admin ${u.online?'':'offline-dot'}"></span>
-        ${u.online?'Online':'Offline'}<br>
-        <small>${u.passcodeSet?'PIN ✓':'No PIN'}</small>
-      </td>
-      <td>${u.joinDate}</td>
-      <td>
-        <button class="action-btn" onclick="window.sendMsgToUser('${u.uid}')"><i class="fas fa-paper-plane"></i></button>
-        <button class="action-btn" onclick="window.toggleVerify('${u.uid}', ${!u.verified})">${u.verified?'✅':'☑️'}</button>
-        <button class="action-btn" onclick="window.warnUser('${u.uid}')"><i class="fas fa-exclamation"></i></button>
-        <button class="action-btn danger" onclick="window.toggleBan('${u.uid}', ${!u.banned})">${u.banned?'🔓':'🔒'}</button>
-      </td>
-    </tr>
-  `).join('');
-}
-
+// ==== Global Functions ====
+window.go = go;
 window.filterUsers = () => {
   const q = document.getElementById('user-search').value.toLowerCase();
   const filtered = allUsersData.filter(u => 
-    u.name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.friendCode?.toLowerCase().includes(q)
+    (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.friendCode||'').toLowerCase().includes(q)
   );
   renderUsersTable(filtered);
 };
@@ -173,7 +116,6 @@ window.toggleBan = async (uid, ban) => {
   loadAllUsers();
 };
 
-// Communications Tab
 window.searchUsersForComm = async () => {
   const q = document.getElementById('comm-search').value.trim();
   if(!q) { document.getElementById('user-select-list').innerHTML=''; return; }
@@ -181,21 +123,21 @@ window.searchUsersForComm = async () => {
   const results = await searchUsers(q);
   const list = document.getElementById('user-select-list');
   list.innerHTML = results.map(u => `
-    <div class="list-item" onclick="selectUserForComm('${u.uid}','${u.name}')">
+    <div class="list-item" onclick="window.selectUserForComm('${u.uid}','${u.name}')">
       <span>${u.name} (${u.email})</span>
       <i class="fas fa-chevron-right"></i>
     </div>
   `).join('');
 };
 
-window.selectUserForComm = async (uid, name) => {
+window.selectUserForComm = (uid, name) => {
   selectedUserId = uid;
   document.getElementById('conv-with').textContent = name;
   document.getElementById('conversation-container').classList.remove('hidden');
   const cid = chatId(ADMIN_UID, uid);
   onValue(ref(db,`chats/${cid}/messages`), snap => {
     const msgs = snap.val() || {};
-    const sorted = Object.values(msgs).sort((a,b)=>a.ts-b.ts);
+    const sorted = Object.values(msgs).sort((a,b) => a.ts - b.ts);
     const html = sorted.map(m => `
       <div class="msg-admin">
         <strong>${m.senderId===ADMIN_UID?'Admin':name}:</strong> ${m.text||'📎 media'}<br>
@@ -215,11 +157,48 @@ window.sendAdminMessage = async () => {
   toast('Sent');
 };
 
-// Online Users Tab
+// ==== Render Functions ====
+function renderUsersTable(users) {
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span>${u.name||'?'}</span>
+          ${u.verified?`<img src="https://i.ibb.co/W4fjDGmD/32539-removebg-preview.png" style="width:14px;">`:''}
+        </div>
+        <small style="color:var(--text2);">${u.email}</small>
+      </td>
+      <td><code>${u.friendCode}</code></td>
+      <td>
+        <span class="online-dot-admin ${u.online?'':'offline-dot'}"></span>
+        ${u.online?'Online':'Offline'}<br>
+        <small>${u.passcodeSet?'PIN ✓':'No PIN'}</small>
+      </td>
+      <td>${u.joinDate}</td>
+      <td>
+        <button class="action-btn" onclick="window.sendMsgToUser('${u.uid}')"><i class="fas fa-paper-plane"></i></button>
+        <button class="action-btn" onclick="window.toggleVerify('${u.uid}', ${!u.verified})">${u.verified?'✅':'☑️'}</button>
+        <button class="action-btn" onclick="window.warnUser('${u.uid}')"><i class="fas fa-exclamation"></i></button>
+        <button class="action-btn danger" onclick="window.toggleBan('${u.uid}', ${!u.banned})">${u.banned?'🔓':'🔒'}</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function loadAllUsers() {
+  allUsersData = await getAllUsers();
+  for(const u of allUsersData) {
+    const banSnap = await get(ref(db,`admin/banned/${u.uid}`));
+    u.banned = banSnap.val() === true;
+  }
+  renderUsersTable(allUsersData);
+}
+
 function loadOnlineUsers() {
   onValue(ref(db,'users'), snap => {
     const users = snap.val() || {};
-    const online = Object.entries(users).filter(([_,u])=>u.online);
+    const online = Object.entries(users).filter(([_,u]) => u.online);
     const list = document.getElementById('online-users-list');
     list.innerHTML = online.map(([uid,u]) => `
       <div class="list-item">
@@ -227,13 +206,42 @@ function loadOnlineUsers() {
           <span class="online-dot-admin"></span>
           <div>${u.name||'User'} (${u.email})</div>
         </div>
-        <small>${u.friendCode||''}</small>
+        <small>${generateUserCode(uid)}</small>
       </div>
     `).join('') || '<p>No online users</p>';
   });
 }
 
-window.go = go;
+// ==== Auth & Init ====
+onAuthStateChanged(auth, async user => {
+  if(!user) return go('index.html');
+  if(!await isAdmin(user.uid) && user.email!=='admin@chatcity.com') {
+    toast('Access denied', 'error');
+    return go('profile.html');
+  }
+  me = user;
+  initTabs();
+  loadAllUsers();
+  loadOnlineUsers();
+});
+
+function initTabs() {
+  const tabs = {
+    'tab-users-btn': 'tab-users',
+    'tab-communications-btn': 'tab-communications',
+    'tab-online-btn': 'tab-online'
+  };
+  Object.entries(tabs).forEach(([btnId, tabId]) => {
+    document.getElementById(btnId).addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(btnId).classList.add('active');
+      document.getElementById('tab-users').classList.add('hidden');
+      document.getElementById('tab-communications').classList.add('hidden');
+      document.getElementById('tab-online').classList.add('hidden');
+      document.getElementById(tabId).classList.remove('hidden');
+    });
+  });
+}
 </script>
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
 <script>eruda.init();</script>
