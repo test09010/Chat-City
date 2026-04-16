@@ -37,7 +37,7 @@ const ADMIN_UID    = 'admin_system_001';
 // 🔑 VAPID Public Key (from screenshot)
 const VAPID_KEY    = 'BOZAB1T7v4ZhpbAFgatdb8PRtimuqCEjr7tYgYZF7UJwJeVTq_gkAq6CgcOF_-GfLUnlwCGIdsqkM8nnpoUXnc';
 const VERIFIED_BADGE = 'https://i.ibb.co/W4fjDGmD/32539-removebg-preview.png';
-const BACKEND_URL  = 'https://chatcity-backend.onrender.com'; // আপনার রেন্ডার URL এখানে বসাবেন
+const BACKEND_URL  = 'https://notify-backend-chatcity.onrender.com'; // আপনার রেন্ডার URL এখানে বসাবেন
 
 const COLORS = ['#7c6eff','#ff6b9d','#2dd4a0','#f7c94b','#60a5fa','#fb923c','#c084fc','#34d399'];
 const colorFor   = uid => { let h=0; for(const c of uid) h=(h*31+c.charCodeAt(0))%COLORS.length; return COLORS[h]; };
