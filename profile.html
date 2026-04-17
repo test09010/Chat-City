@@ -93,17 +93,18 @@
 </div>
 
 <!-- Edit Name Modal -->
-<div class="modal-overlay" id="name-modal">
+<div class="modal-overlay" id="name-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title"><i class="fas fa-user-pen" style="color:var(--accent);"></i> Edit Name</div>
     <input class="inp" type="text" id="new-name-inp" placeholder="Your full name" style="margin-bottom:14px;">
     <button class="btn btn-primary" style="width:100%;" onclick="saveName()"><i class="fas fa-save"></i> Save</button>
+    <div id="name-err" class="errmsg" style="margin-top:8px;"></div>
   </div>
 </div>
 
 <!-- Change Password Modal -->
-<div class="modal-overlay" id="pw-modal">
+<div class="modal-overlay" id="pw-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title"><i class="fas fa-key" style="color:var(--green);"></i> Change Password</div>
@@ -115,7 +116,7 @@
 </div>
 
 <!-- Change PIN Modal -->
-<div class="modal-overlay" id="pin-modal">
+<div class="modal-overlay" id="pin-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title"><i class="fas fa-lock" style="color:var(--yellow);"></i> Set New Passcode</div>
@@ -135,7 +136,7 @@
 </div>
 
 <!-- Avatar Modal -->
-<div class="modal-overlay" id="avatar-modal">
+<div class="modal-overlay" id="avatar-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title"><i class="fas fa-camera" style="color:var(--accent);"></i> Profile Photo</div>
@@ -145,6 +146,9 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+
 <script type="module">
 import {
   auth, db, ref, get, set, onAuthStateChanged, signOut, updateProfile,
@@ -153,158 +157,195 @@ import {
   generateUserCode, updateUserSearchIndex, isAdmin, ADMIN_EMAIL, VERIFIED_BADGE
 } from './firebase.js';
 
-let me=null, userData=null;
-let pinStep=1, pinFirst='', pinEntered='';
-window.go=go;
+let me = null, userData = null;
+let pinStep = 1, pinFirst = '', pinEntered = '';
+window.go = go;
 
-onAuthStateChanged(auth, async user=>{
-  if(!user){ go('index.html'); return; }
-  const sess=getSession(); if(!sess||sess.uid!==user.uid){ go('index.html'); return; }
-  me=user;
+onAuthStateChanged(auth, async user => {
+  if (!user) { go('index.html'); return; }
+  const sess = getSession();
+  if (!sess || sess.uid !== user.uid) { go('index.html'); return; }
+  me = user;
   await loadProfile();
-  const admin = await isAdmin(me.uid) || me.email===ADMIN_EMAIL;
-  if(admin) document.getElementById('admin-link').style.display='flex';
+  const admin = await isAdmin(me.uid) || me.email === ADMIN_EMAIL;
+  if (admin) document.getElementById('admin-link').style.display = 'flex';
   updateNotifStatus();
 });
 
 async function loadProfile() {
-  const snap=await get(ref(db,`users/${me.uid}`));
-  userData=snap.val()||{};
-  const av=document.getElementById('p-av');
-  if(userData.photo) { av.innerHTML=`<img src="${userData.photo}" alt="">`; }
-  else { av.textContent=userData.initials||initialsOf(me.displayName||me.email||'?'); av.style.background=userData.color||colorFor(me.uid); }
-  const name=userData.name||me.displayName||'User';
+  const snap = await get(ref(db, `users/${me.uid}`));
+  userData = snap.val() || {};
+  const av = document.getElementById('p-av');
+  if (userData.photo) {
+    av.innerHTML = `<img src="${userData.photo}" alt="">`;
+  } else {
+    av.textContent = userData.initials || initialsOf(me.displayName || me.email || '?');
+    av.style.background = userData.color || colorFor(me.uid);
+  }
+  const name = userData.name || me.displayName || 'User';
   document.getElementById('p-name').innerHTML = `${name} ${userData.verified ? `<img src="${VERIFIED_BADGE}" style="width:20px;height:20px;vertical-align:middle;animation:shine 2s infinite;">` : ''}`;
-  document.getElementById('p-email').textContent=me.email||'';
-  document.getElementById('disp-name').textContent=name;
-  document.getElementById('new-name-inp').value=name;
-  const code=generateUserCode(me.uid);
-  document.getElementById('code-val').textContent=code;
+  document.getElementById('p-email').textContent = me.email || '';
+  document.getElementById('disp-name').textContent = name;
+  document.getElementById('new-name-inp').value = name;
+  document.getElementById('code-val').textContent = generateUserCode(me.uid);
 }
 
-window.copyCode=()=>{
-  const code=document.getElementById('code-val').textContent;
-  navigator.clipboard.writeText(code).then(()=>toast('Friend code copied!','ok'));
+window.copyCode = () => {
+  const code = document.getElementById('code-val').textContent;
+  navigator.clipboard.writeText(code)
+    .then(() => toast('Friend code copied!', 'ok'))
+    .catch(() => toast('Copy failed', 'error'));
 };
 
 function updateNotifStatus() {
-  const el=document.getElementById('notif-status');
-  if(!('Notification' in window)) { el.textContent='Not supported'; return; }
-  if(Notification.permission==='granted') el.textContent='✅ Enabled';
-  else if(Notification.permission==='denied') el.textContent='❌ Blocked — Enable in browser settings';
-  else el.textContent='⏳ Not set — Tap to enable';
+  const el = document.getElementById('notif-status');
+  if (!('Notification' in window)) { el.textContent = 'Not supported'; return; }
+  if (Notification.permission === 'granted') el.textContent = '✅ Enabled';
+  else if (Notification.permission === 'denied') el.textContent = '❌ Blocked — Enable in browser settings';
+  else el.textContent = '⏳ Not set — Tap to enable';
 }
 
 window.openNotifSettings = async () => {
-  if(Notification.permission==='default') {
-    const r=await Notification.requestPermission();
+  if (Notification.permission === 'default') {
+    const r = await Notification.requestPermission();
     updateNotifStatus();
-    if(r==='granted') toast('Notifications enabled!','ok');
+    if (r === 'granted') toast('Notifications enabled!', 'ok');
   } else {
-    toast(Notification.permission==='granted'?'Notifications are ON ✅':'Enable in browser settings → Notifications','ok');
+    toast(Notification.permission === 'granted' ? 'Notifications are ON ✅' : 'Enable in browser Settings → Notifications', 'ok');
   }
 };
 
-window.openEditName=()=>{ document.getElementById('name-modal').classList.add('show'); setTimeout(()=>document.getElementById('new-name-inp').focus(),300); };
-document.getElementById('name-modal').addEventListener('click',e=>{ if(e.target.id==='name-modal') e.target.classList.remove('show'); });
-window.saveName=async()=>{
-  const name=document.getElementById('new-name-inp').value.trim();
-  if(!name){ toast('Please enter a name','error'); return; }
-  const upd={ ...userData, name, initials:initialsOf(name) };
-  await set(ref(db,`users/${me.uid}`),upd);
-  await updateUserSearchIndex(me.uid,upd);
-  await updateProfile(me,{ displayName:name });
-  toast('Name updated!','ok');
-  document.getElementById('name-modal').classList.remove('show');
-  await loadProfile();
+window.openEditName = () => {
+  document.getElementById('name-err').textContent = '';
+  document.getElementById('name-modal').classList.add('show');
+  setTimeout(() => document.getElementById('new-name-inp').focus(), 300);
 };
 
-window.openChangePw=()=>{ document.getElementById('pw-modal').classList.add('show'); };
-document.getElementById('pw-modal').addEventListener('click',e=>{ if(e.target.id==='pw-modal') e.target.classList.remove('show'); });
-window.changePw=async()=>{
-  const cur=document.getElementById('cur-pw').value;
-  const newp=document.getElementById('new-pw').value;
-  const errEl=document.getElementById('pw-err');
-  if(!cur||!newp){ errEl.textContent='Fill both fields'; return; }
-  if(newp.length<6){ errEl.textContent='New password min 6 chars'; return; }
+window.saveName = async () => {
+  const name = document.getElementById('new-name-inp').value.trim();
+  const errEl = document.getElementById('name-err');
+  if (!name) { errEl.textContent = 'Please enter a name'; return; }
   try {
-    const cred=EmailAuthProvider.credential(me.email,cur);
-    await reauthenticateWithCredential(me,cred);
-    await updatePassword(me,newp);
-    toast('Password updated!','ok');
-    document.getElementById('pw-modal').classList.remove('show');
-    errEl.textContent='';
-  } catch(e) { errEl.textContent='❌ '+e.message; }
+    const upd = { ...userData, name, initials: initialsOf(name) };
+    await set(ref(db, `users/${me.uid}`), upd);
+    await updateUserSearchIndex(me.uid, upd);
+    await updateProfile(me, { displayName: name });
+    toast('Name updated!', 'ok');
+    document.getElementById('name-modal').classList.remove('show');
+    await loadProfile();
+  } catch (e) {
+    errEl.textContent = e.message;
+  }
 };
 
-window.openChangePin=()=>{
-  pinStep=1; pinFirst=''; pinEntered='';
-  document.getElementById('pin-step-label').textContent='Enter new 4-digit PIN';
-  document.getElementById('pin-change-err').textContent='';
-  updatePinDots([],false);
+window.openChangePw = () => {
+  document.getElementById('pw-err').textContent = '';
+  document.getElementById('cur-pw').value = '';
+  document.getElementById('new-pw').value = '';
+  document.getElementById('pw-modal').classList.add('show');
+};
+
+window.changePw = async () => {
+  const cur = document.getElementById('cur-pw').value;
+  const newp = document.getElementById('new-pw').value;
+  const errEl = document.getElementById('pw-err');
+  errEl.textContent = '';
+  if (!cur || !newp) { errEl.textContent = 'Fill both fields'; return; }
+  if (newp.length < 6) { errEl.textContent = 'New password min 6 chars'; return; }
+  try {
+    const cred = EmailAuthProvider.credential(me.email, cur);
+    await reauthenticateWithCredential(me, cred);
+    await updatePassword(me, newp);
+    toast('Password updated!', 'ok');
+    document.getElementById('pw-modal').classList.remove('show');
+  } catch (e) {
+    if (e.code === 'auth/wrong-password' || e.code === 'auth/invalid-credential') {
+      errEl.textContent = '❌ Current password is wrong';
+    } else {
+      errEl.textContent = '❌ ' + e.message;
+    }
+  }
+};
+
+window.openChangePin = () => {
+  pinStep = 1; pinFirst = ''; pinEntered = '';
+  document.getElementById('pin-step-label').textContent = 'Enter new 4-digit PIN';
+  document.getElementById('pin-change-err').textContent = '';
+  updatePinDots([]);
   document.getElementById('pin-modal').classList.add('show');
 };
-document.getElementById('pin-modal').addEventListener('click',e=>{ if(e.target.id==='pin-modal') e.target.classList.remove('show'); });
 
-function updatePinDots(filled, err=false) {
-  const dots=document.querySelectorAll('#pin-change-dots .pin-dot');
-  dots.forEach((d,i)=>{ d.classList.toggle('filled',!err&&i<filled.length); d.classList.toggle('error',err); });
+function updatePinDots(filled, err = false) {
+  const dots = document.querySelectorAll('#pin-change-dots .pin-dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('filled', !err && i < filled.length);
+    d.classList.toggle('error', err);
+  });
 }
 
-window.pinChangeKey=k=>{
-  if(k==='⌫') pinEntered=pinEntered.slice(0,-1);
-  else if(pinEntered.length<4) pinEntered+=k;
+window.pinChangeKey = k => {
+  if (k === '⌫') pinEntered = pinEntered.slice(0, -1);
+  else if (pinEntered.length < 4) pinEntered += k;
   updatePinDots(pinEntered);
-  if(pinEntered.length===4) setTimeout(processPin,120);
+  if (pinEntered.length === 4) setTimeout(processPin, 120);
 };
 
 async function processPin() {
-  if(pinStep===1) {
-    pinFirst=pinEntered; pinEntered='';
-    document.getElementById('pin-step-label').textContent='Confirm your PIN';
+  if (pinStep === 1) {
+    pinFirst = pinEntered;
+    pinEntered = '';
+    document.getElementById('pin-step-label').textContent = 'Confirm your PIN';
     updatePinDots('');
-    pinStep=2;
+    pinStep = 2;
   } else {
-    if(pinEntered===pinFirst) {
-      await set(ref(db,`users/${me.uid}/passcode`),pinEntered);
-      const sess=getSession(); saveSession(me.uid,pinEntered);
-      toast('Passcode updated!','ok');
+    if (pinEntered === pinFirst) {
+      await set(ref(db, `users/${me.uid}/passcode`), pinEntered);
+      saveSession(me.uid, pinEntered);
+      toast('Passcode updated!', 'ok');
       document.getElementById('pin-modal').classList.remove('show');
     } else {
-      updatePinDots('',true);
-      document.getElementById('pin-change-err').textContent='❌ PINs do not match. Try again.';
-      pinEntered=''; pinFirst=''; pinStep=1;
-      setTimeout(()=>{ updatePinDots(''); document.getElementById('pin-change-err').textContent=''; document.getElementById('pin-step-label').textContent='Enter new 4-digit PIN'; },900);
+      updatePinDots('', true);
+      document.getElementById('pin-change-err').textContent = '❌ PINs do not match. Try again.';
+      pinEntered = ''; pinFirst = ''; pinStep = 1;
+      setTimeout(() => {
+        updatePinDots('');
+        document.getElementById('pin-change-err').textContent = '';
+        document.getElementById('pin-step-label').textContent = 'Enter new 4-digit PIN';
+      }, 900);
     }
   }
 }
 
-window.openAvatarModal=()=>document.getElementById('avatar-modal').classList.add('show');
-document.getElementById('avatar-modal').addEventListener('click',e=>{ if(e.target.id==='avatar-modal') e.target.classList.remove('show'); });
-window.uploadAvatar=async inp=>{
-  const file=inp.files[0]; if(!file) return;
-  if(file.size>2*1024*1024){ toast('Image too large (max 2MB)','error'); return; }
-  const r=new FileReader();
-  r.onloadend=async()=>{
-    const b64=r.result;
-    await set(ref(db,`users/${me.uid}/photo`),b64);
-    toast('Photo updated!','ok');
-    document.getElementById('avatar-modal').classList.remove('show');
-    await loadProfile();
+window.openAvatarModal = () => document.getElementById('avatar-modal').classList.add('show');
+
+window.uploadAvatar = async inp => {
+  const file = inp.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { toast('Image too large (max 2MB)', 'error'); return; }
+  const r = new FileReader();
+  r.onloadend = async () => {
+    try {
+      const b64 = r.result;
+      await set(ref(db, `users/${me.uid}/photo`), b64);
+      toast('Photo updated!', 'ok');
+      document.getElementById('avatar-modal').classList.remove('show');
+      await loadProfile();
+    } catch (e) { toast('Upload failed', 'error'); }
   };
   r.readAsDataURL(file);
 };
-window.removeAvatar=async()=>{
-  await set(ref(db,`users/${me.uid}/photo`),'');
-  toast('Photo removed','ok');
+
+window.removeAvatar = async () => {
+  await set(ref(db, `users/${me.uid}/photo`), '');
+  toast('Photo removed', 'ok');
   document.getElementById('avatar-modal').classList.remove('show');
   await loadProfile();
 };
 
-window.doLogout=async()=>{
-  if(!confirm('Logout from ChatCity?')) return;
+window.doLogout = async () => {
+  if (!confirm('Logout from ChatCity?')) return;
   clearSession();
-  try { await signOut(auth); } catch{}
+  try { await signOut(auth); } catch {}
   go('index.html');
 };
 </script>
