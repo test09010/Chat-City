@@ -8,75 +8,41 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 #root { display:flex;flex-direction:column;height:100dvh; }
-.content { flex:1;overflow-y:auto; }
-.search-sec { padding:12px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5; }
-.search-box { display:flex;align-items:center;gap:10px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:30px;padding:10px 16px;transition:border-color .2s; }
-.search-box:focus-within { border-color:var(--accent); }
-.search-box input { flex:1;background:none;border:none;outline:none;color:var(--text);font-size:14px;font-family:var(--font); }
-.search-box input::placeholder { color:var(--text3); }
-.contact-item { display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s; }
-.contact-item:active { background:var(--bg3); }
-.c-av { width:48px;height:48px;border-radius:50%;font-size:16px;flex-shrink:0;overflow:hidden;display:flex;align-items:center;justify-content:center;font-weight:800; }
-.c-av img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
-.c-info { flex:1;min-width:0; }
-.c-name { font-size:15px;font-weight:700;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.c-sub { font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.chat-btn { background:rgba(45,212,160,0.12);border:1px solid rgba(45,212,160,0.25);color:var(--green);border-radius:10px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .2s;flex-shrink:0;white-space:nowrap; }
-.chat-btn:hover { background:var(--green);color:#000; }
-.sec-lbl { font-size:11px;font-weight:800;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;padding:14px 18px 8px; }
-.empty-sec { text-align:center;padding:32px 24px;color:var(--text3);font-size:13px; }
-.code-card { margin:14px 16px;background:rgba(124,110,255,0.1);border:1px solid rgba(124,110,255,0.25);border-radius:var(--r2);padding:16px; }
-.code-badge { font-size:22px;font-weight:800;font-family:var(--font2);color:var(--accent);letter-spacing:4px;margin:8px 0; }
-.code-search-inp { flex:1;background:none;border:none;outline:none;color:var(--text);font-size:15px;font-family:var(--font2);letter-spacing:3px;font-weight:700; }
-.no-results { text-align:center;padding:40px 24px;color:var(--text3);font-size:13px; }
+.page-content { flex:1;overflow-y:auto; }
+.user-item { display:flex;align-items:center;gap:13px;padding:13px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s; }
+.user-item:active { background:var(--bg3); }
+.user-av { width:52px;height:52px;border-radius:50%;font-size:18px;flex-shrink:0; }
+.user-av img { width:100%;height:100%;object-fit:cover;border-radius:50%; }
+.user-body { flex:1;min-width:0; }
+.user-name { font-weight:700;font-size:15px;margin-bottom:3px; }
+.user-code { font-size:12px;color:var(--text2); }
+.add-btn { width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+.search-wrap { padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5; }
+.search-inp { width:100%;padding:10px 16px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:30px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;transition:border .2s; }
+.search-inp:focus { border-color:var(--accent); }
+.empty { display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 24px;text-align:center;color:var(--text3); }
+.empty-emoji { font-size:60px;margin-bottom:16px;opacity:.5; }
+.empty h3 { font-size:18px;font-weight:700;color:var(--text2);margin-bottom:8px; }
+.add-friend-modal { display:none; }
 </style>
 </head>
 <body>
 <div id="toast"></div>
 <div id="root">
   <div class="topbar">
-    <button class="back-btn btn" style="background:none;border:none;color:var(--text2);font-size:20px;cursor:pointer;width:40px;height:40px;border-radius:50%;" onclick="go('home.html')"><i class="fas fa-arrow-left"></i></button>
-    <div class="topbar-title">Contacts</div>
-    <div style="width:38px;"></div>
+    <div class="topbar-title">Find Users</div>
+    <button class="btn btn-primary" style="padding:8px 14px;font-size:13px;" onclick="openAddFriendModal()"><i class="fas fa-user-plus"></i> Add by Code</button>
   </div>
 
-  <div class="content">
-    <div class="search-sec">
-      <div class="search-box">
-        <i class="fas fa-search" style="color:var(--text3);"></i>
-        <input type="text" id="search" placeholder="Search name or email…" oninput="doSearch()">
-        <span id="search-loading" style="color:var(--text3);font-size:12px;display:none;"><i class="fas fa-spinner fa-spin"></i></span>
-        <button onclick="clearSearch()" id="clear-btn" class="hidden" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;"><i class="fas fa-times"></i></button>
-      </div>
+  <div class="page-content">
+    <div class="search-wrap">
+      <input class="search-inp" type="text" id="search" placeholder="🔍 Search users…" oninput="filterUsers()">
     </div>
-
-    <div id="search-results" class="hidden">
-      <div class="sec-lbl"><i class="fas fa-search"></i> SEARCH RESULTS</div>
-      <div id="results-list"></div>
-    </div>
-
-    <div id="default-content">
-      <div class="code-card">
-        <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;"><i class="fas fa-hashtag"></i> My Friend Code</div>
-        <div class="code-badge" id="my-code">———————</div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:12px;">Share this 7-character code to add friends</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-primary" style="flex:1;padding:10px;" onclick="copyMyCode()"><i class="fas fa-copy"></i> Copy Code</button>
-          <button class="btn btn-ghost" style="flex:1;padding:10px;" onclick="showAddByCode()"><i class="fas fa-user-plus"></i> Add by Code</button>
-        </div>
-      </div>
-
-      <div id="suggestions-section">
-        <div class="sec-lbl"><i class="fas fa-lightbulb"></i> SUGGESTED USERS</div>
-        <div id="suggestions-list"></div>
-        <div id="no-suggestions" class="empty-sec hidden"><i class="fas fa-users" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px;"></i> No suggestions yet</div>
-      </div>
-
-      <div id="contacts-section">
-        <div class="sec-lbl"><i class="fas fa-address-book"></i> MY CONTACTS</div>
-        <div id="contacts-list"></div>
-        <div id="no-contacts" class="empty-sec hidden"><i class="fas fa-users" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px;"></i> No contacts yet.<br>Search to find people.</div>
-      </div>
+    <div id="users-list"></div>
+    <div id="empty-state" class="empty hidden">
+      <div class="empty-emoji"><i class="fas fa-users" style="opacity:.3;"></i></div>
+      <h3>No users found</h3>
+      <p>Search or add friends using their code</p>
     </div>
   </div>
 
@@ -87,17 +53,14 @@
   </nav>
 </div>
 
-<div class="modal-overlay" id="add-code-modal">
+<!-- Add Friend Modal -->
+<div class="modal-overlay" id="add-friend-modal" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
-    <div class="modal-title"><i class="fas fa-user-plus" style="color:var(--accent);"></i> Add Friend by Code</div>
-    <div style="margin-bottom:16px;color:var(--text2);font-size:13px;text-align:center;">Enter your friend's 7-character code</div>
-    <div class="search-box" style="margin-bottom:16px;">
-      <i class="fas fa-hashtag" style="color:var(--accent);"></i>
-      <input class="code-search-inp" type="text" id="code-inp" maxlength="7" placeholder="XXXXXXX" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
-    </div>
-    <button class="btn btn-primary" style="width:100%;" id="add-code-btn" onclick="addByCode()"><i class="fas fa-user-plus"></i> Add Friend</button>
-    <div id="code-err" class="errmsg" style="margin-top:10px;text-align:center;"></div>
+    <div class="modal-title"><i class="fas fa-user-plus" style="color:var(--accent);"></i> Add by Friend Code</div>
+    <input class="inp" type="text" id="friend-code-inp" placeholder="Enter 8-character code" maxlength="8" style="margin-bottom:14px;">
+    <button class="btn btn-primary" style="width:100%;" onclick="addByCode()"><i class="fas fa-check"></i> Add Friend</button>
+    <div id="add-err" class="errmsg" style="margin-top:8px;"></div>
   </div>
 </div>
 
@@ -106,12 +69,13 @@
 
 <script type="module">
 import {
-  auth, db, ref, get, set, onValue, onAuthStateChanged,
-  colorFor, initialsOf, getSession, setOnline, toast, go,
-  searchUsers, generateUserCode, addFriendByCode, VERIFIED_BADGE
+  auth, db, ref, get, onAuthStateChanged,
+  colorFor, initialsOf, generateUserCode, addFriendByCode, searchUsers,
+  toast, go, getSession, VERIFIED_BADGE
 } from './firebase.js';
 
-let me = null, myContacts = {};
+let me = null;
+let allUsers = [];
 window.go = go;
 
 onAuthStateChanged(auth, async user => {
@@ -119,195 +83,103 @@ onAuthStateChanged(auth, async user => {
   const sess = getSession();
   if (!sess || sess.uid !== user.uid) { go('index.html'); return; }
   me = user;
-  await setOnline(me.uid);
-  loadMyCode();
-  loadContacts();
+  await loadUsers();
 });
 
-function loadMyCode() {
-  const code = generateUserCode(me.uid);
-  document.getElementById('my-code').textContent = code;
-}
-
-window.copyMyCode = () => {
-  const code = document.getElementById('my-code').textContent;
-  navigator.clipboard.writeText(code)
-    .then(() => toast('Friend code copied! 📋', 'ok'))
-    .catch(() => toast('Copy failed', 'error'));
-};
-
-window.showAddByCode = () => {
-  document.getElementById('add-code-modal').classList.add('show');
-  document.getElementById('code-inp').value = '';
-  document.getElementById('code-err').textContent = '';
-};
-
-document.getElementById('add-code-modal').addEventListener('click', e => {
-  if (e.target.id === 'add-code-modal') e.target.classList.remove('show');
-});
-
-window.addByCode = async () => {
-  const code = document.getElementById('code-inp').value.trim().toUpperCase();
-  const errEl = document.getElementById('code-err');
-  const btn = document.getElementById('add-code-btn');
-  errEl.textContent = '';
-  if (code.length !== 7) { errEl.textContent = 'Please enter a 7-character code'; return; }
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding…';
-  btn.disabled = true;
+async function loadUsers() {
   try {
-    const result = await addFriendByCode(me.uid, code);
-    toast(`${result.user.name} added! 🎉`, 'ok');
-    document.getElementById('add-code-modal').classList.remove('show');
-    loadContacts();
+    const snap = await get(ref(db, 'users'));
+    allUsers = [];
+    snap.forEach(child => {
+      if (child.key !== me.uid) {
+        allUsers.push({ uid: child.key, ...child.val() });
+      }
+    });
+    renderUsers(allUsers);
   } catch (e) {
-    errEl.textContent = '❌ ' + e.message;
-  } finally {
-    btn.innerHTML = '<i class="fas fa-user-plus"></i> Add Friend';
-    btn.disabled = false;
+    console.error('Load users error:', e);
   }
-};
-
-function loadContacts() {
-  onValue(ref(db, `users/${me.uid}/contacts`), async snap => {
-    myContacts = snap.val() || {};
-    const list = document.getElementById('contacts-list');
-    list.innerHTML = '';
-    const ids = Object.keys(myContacts);
-    if (!ids.length) {
-      document.getElementById('no-contacts').classList.remove('hidden');
-      loadSuggestions();
-      return;
-    }
-    document.getElementById('no-contacts').classList.add('hidden');
-    for (const uid of ids) {
-      try {
-        const uSnap = await get(ref(db, `users/${uid}`));
-        if (!uSnap.exists()) continue;
-        const u = { ...uSnap.val(), uid };
-        list.appendChild(buildContactItem(u));
-      } catch {}
-    }
-    loadSuggestions();
-  });
 }
 
-function loadSuggestions() {
-  onValue(ref(db, 'users'), async snap => {
-    const all = snap.val() || {};
-    const list = document.getElementById('suggestions-list');
-    list.innerHTML = '';
-    const ids = Object.keys(all).filter(uid => uid !== me.uid && !myContacts[uid]);
-    const limited = ids.slice(0, 10);
-    if (!limited.length) {
-      document.getElementById('no-suggestions').classList.remove('hidden');
-      return;
-    }
-    document.getElementById('no-suggestions').classList.add('hidden');
-    for (const uid of limited) {
-      const u = all[uid];
-      if (!u) continue;
-      list.appendChild(buildSuggestionItem({ ...u, uid }));
-    }
-  });
-}
-
-function buildContactItem(u) {
-  const item = document.createElement('div');
-  item.className = 'contact-item';
-  const avHtml = u.photo
-    ? `<img src="${u.photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
-    : `<div style="background:${u.color || colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials || initialsOf(u.name || '?')}</div>`;
-  item.onclick = () => startChat(u);
-  item.innerHTML = `<div class="c-av">${avHtml}</div>
-    <div class="c-info">
-      <div class="c-name">${u.name || 'User'} ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;margin-left:3px;">` : ''}</div>
-      <div class="c-sub"><i class="fas fa-envelope" style="font-size:10px;"></i> ${u.email || ''}</div>
-    </div>
-    <i class="fas fa-chevron-right" style="color:var(--accent);font-size:16px;"></i>`;
-  return item;
-}
-
-function buildSuggestionItem(u) {
-  const item = document.createElement('div');
-  item.className = 'contact-item';
-  const avHtml = u.photo
-    ? `<img src="${u.photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
-    : `<div style="background:${u.color || colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials || initialsOf(u.name || '?')}</div>`;
-  const btn = document.createElement('button');
-  btn.className = 'chat-btn';
-  btn.innerHTML = '<i class="fas fa-comment"></i> Chat';
-  btn.onclick = e => { e.stopPropagation(); startChat(u); };
-  item.innerHTML = `<div class="c-av">${avHtml}</div>
-    <div class="c-info"><div class="c-name">${u.name || 'User'} ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;">` : ''}</div><div class="c-sub">${u.email || ''}</div></div>`;
-  item.appendChild(btn);
-  return item;
-}
-
-function buildSearchResult(u) {
-  const item = document.createElement('div');
-  item.className = 'contact-item';
-  const avHtml = u.photo
-    ? `<img src="${u.photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
-    : `<div style="background:${u.color || colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials || initialsOf(u.name || '?')}</div>`;
-  const btn = document.createElement('button');
-  btn.className = 'chat-btn';
-  btn.innerHTML = '<i class="fas fa-comment"></i> Chat';
-  btn.onclick = e => { e.stopPropagation(); startChat(u); };
-  item.innerHTML = `<div class="c-av">${avHtml}</div>
-    <div class="c-info"><div class="c-name">${u.name || 'User'} ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;">` : ''}</div><div class="c-sub">${u.email || ''}</div></div>`;
-  item.appendChild(btn);
-  return item;
-}
-
-function startChat(u) {
-  sessionStorage.setItem('cc_chat_target', JSON.stringify({
-    uid: u.uid,
-    name: u.name || 'User',
-    initials: u.initials || initialsOf(u.name || '?'),
-    color: u.color || colorFor(u.uid),
-    photo: u.photo || ''
-  }));
-  go('chat.html');
-}
-
-let searchTimer = null;
-window.doSearch = () => {
-  const q = document.getElementById('search').value.trim();
-  const loading = document.getElementById('search-loading');
-  const clearBtn = document.getElementById('clear-btn');
-  clearBtn.classList.toggle('hidden', !q);
-  if (!q) {
-    document.getElementById('search-results').classList.add('hidden');
-    document.getElementById('default-content').style.display = '';
+function renderUsers(users) {
+  const list = document.getElementById('users-list');
+  list.innerHTML = '';
+  
+  if (!users.length) {
+    document.getElementById('empty-state').classList.remove('hidden');
     return;
   }
-  clearTimeout(searchTimer);
-  loading.style.display = 'inline';
-  document.getElementById('default-content').style.display = 'none';
-  searchTimer = setTimeout(async () => {
-    try {
-      const results = await searchUsers(q, me.uid);
-      const list = document.getElementById('results-list');
-      list.innerHTML = '';
-      document.getElementById('search-results').classList.remove('hidden');
-      if (!results.length) {
-        list.innerHTML = `<div class="no-results"><i class="fas fa-search" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px;"></i> No users found for "${q}"</div>`;
-      } else {
-        results.forEach(u => list.appendChild(buildSearchResult(u)));
-      }
-    } catch (e) {
-      toast('Search error: ' + e.message, 'error');
-    } finally {
-      loading.style.display = 'none';
-    }
-  }, 350);
+  document.getElementById('empty-state').classList.add('hidden');
+
+  users.forEach(u => {
+    const item = document.createElement('div');
+    item.className = 'user-item';
+    item.dataset.name = (u.name || '').toLowerCase();
+
+    const avHtml = u.photo
+      ? `<img src="${u.photo}" alt="">`
+      : `<div class="av user-av" style="background:${u.color || colorFor(u.uid)}">${u.initials || initialsOf(u.name || '?')}</div>`;
+
+    item.innerHTML = `
+      <div class="user-av">${avHtml}</div>
+      <div class="user-body">
+        <div class="user-name">
+          ${u.name || 'User'}
+          ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;margin-left:3px;">` : ''}
+        </div>
+        <div class="user-code"><i class="fas fa-hashtag" style="font-size:10px;"></i> ${generateUserCode(u.uid)}</div>
+      </div>
+      <button class="add-btn" onclick="startChat('${u.uid}', event)"><i class="fas fa-comment"></i></button>`;
+
+    list.appendChild(item);
+  });
+}
+
+window.filterUsers = () => {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  document.querySelectorAll('.user-item').forEach(el => {
+    el.style.display = (!q || el.dataset.name.includes(q)) ? '' : 'none';
+  });
 };
 
-window.clearSearch = () => {
-  document.getElementById('search').value = '';
-  document.getElementById('search-results').classList.add('hidden');
-  document.getElementById('clear-btn').classList.add('hidden');
-  document.getElementById('default-content').style.display = '';
+window.startChat = (uid, e) => {
+  e.stopPropagation();
+  const user = allUsers.find(u => u.uid === uid);
+  if (!user) return;
+  sessionStorage.setItem('cc_chat_target', JSON.stringify({
+    uid: user.uid,
+    name: user.name,
+    initials: user.initials || initialsOf(user.name || '?'),
+    color: user.color || colorFor(user.uid),
+    photo: user.photo || ''
+  }));
+  go('chat.html');
+};
+
+window.openAddFriendModal = () => {
+  document.getElementById('add-err').textContent = '';
+  document.getElementById('friend-code-inp').value = '';
+  document.getElementById('add-friend-modal').classList.add('show');
+};
+
+window.addByCode = async () => {
+  const code = document.getElementById('friend-code-inp').value.trim().toUpperCase();
+  const errEl = document.getElementById('add-err');
+  errEl.textContent = '';
+
+  if (!code || code.length !== 8) {
+    errEl.textContent = 'Enter valid 8-character code';
+    return;
+  }
+
+  try {
+    const user = await addFriendByCode(me.uid, code);
+    toast(`Added ${user.name}!`, 'ok');
+    document.getElementById('add-friend-modal').classList.remove('show');
+    await loadUsers();
+  } catch (e) {
+    errEl.textContent = '❌ ' + (e.message || 'User not found');
+  }
 };
 </script>
 </body>
