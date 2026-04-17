@@ -143,15 +143,31 @@ const sendPushToUser = async (receiverUid, title, body, url = 'home.html') => {
   try {
     const snap = await get(ref(db, `users/${receiverUid}`));
     const u = snap.val();
-    if (!u || u.online) return;
+    if (!u) return;
+    
+    // ✅ FIXED: সবসময় notification পাঠাই
     const token = u.fcmToken;
-    if (!token) return;
-    await fetch(`${BACKEND_URL}/api/sendPush`, {
+    if (!token) {
+      console.log('⚠️ No FCM token for user:', receiverUid);
+      return;
+    }
+    
+    console.log('📤 Sending push notification to:', receiverUid);
+    const response = await fetch(`${BACKEND_URL}/api/sendPush`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token, title, body, url })
     });
-  } catch (e) {}
+    
+    const result = await response.json();
+    if (!response.ok) {
+      console.error('❌ Push failed:', result);
+    } else {
+      console.log('✅ Push sent:', result);
+    }
+  } catch (e) {
+    console.error('❌ SendPushToUser error:', e);
+  }
 };
 
 // ═══════════════════════════════════════════════════════════
