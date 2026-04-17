@@ -699,6 +699,18 @@ window.sendText = async () => {
   inp.focus(); // ✅ KEY: সবসময় focus রাখুন!
 };
 
+  // ── Input Handling ──
+window.onKey = e => {
+  if (e.key === 'Enter' && !e.shiftKey) { 
+    e.preventDefault(); 
+    sendText(); 
+  }
+};
+
+window.resize = el => {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+};
 // ── Typing ──
 function sendTyping() {
   if (!isTyping) { isTyping = true; set(ref(db, `chats/${CHAT_ID}/typing/${me.uid}`), true); }
