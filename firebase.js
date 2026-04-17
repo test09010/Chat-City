@@ -20,9 +20,10 @@ export const db = getDatabase(app);
 // Google Auth Provider
 export const gProvider = new GoogleAuthProvider();
 
-// Constants
-export const ref_ = ref;
-export { get, set, push, update, remove, onValue, off, onDisconnect };
+// ✅ EXPORTS - Database Functions
+export { ref, get, set, push, update, remove, onValue, off, onDisconnect };
+
+// ✅ EXPORTS - Auth Functions
 export { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword };
 export { onAuthStateChanged, signOut, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail };
 
@@ -101,7 +102,6 @@ export const initFCM = async uid => {
   console.log('🔔 [FCM] Initializing FCM for user:', uid);
   
   try {
-    // Check browser support
     if (!('serviceWorker' in navigator)) {
       console.warn('⚠️ [FCM] Service Workers not supported');
       return;
@@ -112,7 +112,6 @@ export const initFCM = async uid => {
       return;
     }
 
-    // Request permission if needed
     if (Notification.permission === 'default') {
       console.log('📋 [FCM] Requesting permission...');
       await Notification.requestPermission();
@@ -123,20 +122,16 @@ export const initFCM = async uid => {
       return;
     }
 
-    // Register service worker
     try {
-      const registration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+      await navigator.serviceWorker.register('firebase-messaging-sw.js');
       console.log('✅ [FCM] Service Worker registered');
     } catch (e) {
       console.warn('⚠️ [FCM] Service Worker registration failed:', e.message);
     }
 
-    // Import Firebase Messaging
     const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js');
-    
     const messaging = getMessaging(app);
 
-    // Get FCM token
     try {
       const token = await getToken(messaging, {
         vapidKey: VAPID_KEY,
@@ -145,15 +140,11 @@ export const initFCM = async uid => {
 
       if (token) {
         console.log('✅ [FCM] Token received:', token.substring(0, 30) + '...');
-        
-        // Save token to database
         await set(ref(db, `users/${uid}/fcmToken`), token);
         console.log('✅ [FCM] Token saved to database');
 
-        // Listen for foreground messages
         onMessage(messaging, payload => {
           console.log('📬 [FCM] Foreground message:', payload);
-          
           if (payload.notification) {
             const { title, body } = payload.notification;
             if ('Notification' in window && Notification.permission === 'granted') {
@@ -233,14 +224,11 @@ export const isAdmin = async uid => {
 };
 
 // ── User Utilities ──
-export const generateUserCode = uid => {
-  return uid.substring(0, 8).toUpperCase();
-};
+export const generateUserCode = uid => uid.substring(0, 8).toUpperCase();
 
 export const createUserSearchIndex = async (uid, userData) => {
   const code = generateUserCode(uid);
   const name = userData.name || '';
-  
   await set(ref(db, `users/${uid}`), {
     ...userData,
     friendCode: code,
