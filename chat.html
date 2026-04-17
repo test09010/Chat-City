@@ -935,6 +935,7 @@ function blobToBase64(blob) {
 window.startCall = async type => {
   if (callId) { toast('Already in a call', 'error'); return; }
   callType = type;
+  
   try {
     localStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
@@ -944,18 +945,22 @@ window.startCall = async type => {
     toast('Media access denied: ' + e.message, 'error');
     return;
   }
+  
   callId = push(ref(db, 'calls')).key;
   pc = new RTCPeerConnection(ICE);
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  
   pc.ontrack = e => {
     remoteStream = e.streams[0];
     const remVideo = document.getElementById('remote-v');
     remVideo.srcObject = remoteStream;
     remVideo.play().catch(() => {});
   };
+  
   pc.onicecandidate = e => {
     if (e.candidate) push(ref(db, `calls/${callId}/callerC`), e.candidate.toJSON());
   };
+  
   pc.onconnectionstatechange = () => {
     if (pc?.connectionState === 'connected') {
       document.getElementById('call-status').textContent = 'Connected';
@@ -968,8 +973,10 @@ window.startCall = async type => {
       endCall();
     }
   };
+  
   const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: type === 'video' });
   await pc.setLocalDescription(offer);
+  
   await set(ref(db, `calls/${callId}`), {
     callerId: me.uid,
     callerName: me.displayName || me.email || 'Someone',
@@ -979,7 +986,12 @@ window.startCall = async type => {
     offer: { sdp: offer.sdp, type: offer.type },
     ts: Date.now()
   });
+  
+  // ✅ Call Screen সবসময় সামনে থাকবে
   showCallUI(target, 'Calling…', type);
+  const callOverlay = document.getElementById('call-overlay');
+  callOverlay.style.zIndex = '9999';
+  
   sendPushToUser(target.uid, 'Incoming Call 📞', `${me.displayName || 'Someone'} is calling you (${type})`);
 
   onValue(ref(db, `calls/${callId}/answer`), async s => {
@@ -987,9 +999,11 @@ window.startCall = async type => {
       await pc.setRemoteDescription(new RTCSessionDescription(s.val())).catch(() => {});
     }
   });
+  
   onValue(ref(db, `calls/${callId}/calleeC`), s => {
     s.forEach(c => { if (c.val()) pc?.addIceCandidate(new RTCIceCandidate(c.val())).catch(() => {}); });
   });
+  
   onValue(ref(db, `calls/${callId}/status`), s => {
     if (s.val() === 'ended') endCall(false);
   });
