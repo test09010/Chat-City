@@ -7,30 +7,44 @@ firebase.initializeApp({
   authDomain: "chatcity-63c68.firebaseapp.com",
   databaseURL: "https://chatcity-63c68-default-rtdb.firebaseio.com",
   projectId: "chatcity-63c68",
-  storageBucket: "chatcity-63c68.firebasestorage.app",
-  messagingSenderId: "1015529457316",
-  appId: "1:1015529457316:web:2e90bfaacbd515a44208d7"
+  storageBucket: "chatcity-63c68.appspot.com",
+  messagingSenderId: "961766102206",
+  appId: "1:961766102206:web:e8f0f8c7b8e3d5c4a2b1c0"
 });
 
 const messaging = firebase.messaging();
 
+console.log('🔔 Service Worker: FCM initialized');
+
 messaging.onBackgroundMessage(payload => {
-  const { title, body, icon } = payload.notification || {};
-  self.registration.showNotification(title || 'ChatCity 💬', {
-    body: body || 'New message',
-    icon: icon || 'https://cdn-icons-png.flaticon.com/512/3048/3048122.png',
+  console.log('📬 [BG] Background message:', payload);
+  
+  const notificationTitle = payload.notification?.title || 'ChatCity';
+  const notificationOptions = {
+    body: payload.notification?.body || 'New message',
+    icon: 'https://cdn-icons-png.flaticon.com/512/3048/3048122.png',
     badge: 'https://cdn-icons-png.flaticon.com/512/3048/3048122.png',
-    tag: 'chatcity-msg',
-    data: { url: payload.data?.url || '/home.html' },
-    vibrate: [200, 100, 200]
-  });
+    tag: 'chatcity-notification',
+    requireInteraction: false,
+    click_action: payload.notification?.clickAction || 'home.html'
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
 self.addEventListener('notificationclick', event => {
+  console.log('👆 Notification clicked');
   event.notification.close();
-  const url = event.notification.data?.url || '/home.html';
-  event.waitUntil(clients.matchAll({type:'window'}).then(cs => {
-    for(const c of cs) if(c.url.includes('ChatCity')) { c.focus(); return; }
-    clients.openWindow(url);
-  }));
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then(clientList => {
+      for (let client of clientList) {
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('home.html');
+      }
+    })
+  );
 });
