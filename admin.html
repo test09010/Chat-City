@@ -7,62 +7,76 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-.admin-tabs { display:flex; gap:4px; padding:12px 12px 0; background:var(--bg2); }
-.tab-btn { flex:1; padding:12px; background:var(--bg3); border:none; border-radius:12px 12px 0 0; color:var(--text2); font-weight:700; cursor:pointer; }
-.tab-btn.active { background:var(--bg); color:var(--accent); border-bottom:2px solid var(--accent); }
-.tab-content { padding:16px; }
-.user-table { width:100%; border-collapse:collapse; font-size:13px; }
-.user-table th { text-align:left; padding:10px 8px; color:var(--text2); border-bottom:1px solid var(--border); }
-.user-table td { padding:12px 8px; border-bottom:1px solid var(--border); }
-.action-btn { background:var(--bg3); border:1px solid var(--border2); border-radius:6px; padding:6px 10px; margin:2px; cursor:pointer; font-size:12px; }
-.action-btn.danger { color:var(--red); border-color:var(--red); }
-.online-dot-admin { width:10px; height:10px; border-radius:50%; background:var(--green); display:inline-block; margin-right:5px; }
+.admin-tabs { display:flex;gap:4px;padding:12px 12px 0;background:var(--bg2); }
+.tab-btn { flex:1;padding:12px 4px;background:var(--bg3);border:none;border-radius:12px 12px 0 0;color:var(--text2);font-weight:700;cursor:pointer;font-family:var(--font);font-size:13px;transition:all .2s; }
+.tab-btn.active { background:var(--bg);color:var(--accent);border-bottom:2px solid var(--accent); }
+.tab-content { padding:16px;overflow-y:auto;flex:1; }
+.user-table { width:100%;border-collapse:collapse;font-size:13px; }
+.user-table th { text-align:left;padding:10px 8px;color:var(--text2);border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase;letter-spacing:.5px; }
+.user-table td { padding:12px 8px;border-bottom:1px solid var(--border);vertical-align:middle; }
+.action-btn { background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:6px 10px;margin:2px;cursor:pointer;font-size:12px;color:var(--text);font-family:var(--font);transition:all .2s; }
+.action-btn:hover { background:var(--bg4); }
+.action-btn.danger { color:var(--red);border-color:rgba(255,83,112,0.3); }
+.action-btn.danger:hover { background:rgba(255,83,112,0.1); }
+.action-btn.success { color:var(--green);border-color:rgba(45,212,160,0.3); }
+.online-dot-admin { width:10px;height:10px;border-radius:50%;background:var(--green);display:inline-block;margin-right:5px; }
 .offline-dot { background:var(--text3); }
 .search-box { margin-bottom:16px; }
-.conversation-view { background:var(--bg3); border-radius:12px; padding:16px; max-height:400px; overflow-y:auto; margin-top:16px; }
-.msg-admin { padding:8px 12px; margin:4px 0; border-radius:12px; background:var(--bg4); }
+.conversation-view { background:var(--bg3);border-radius:12px;padding:16px;max-height:350px;overflow-y:auto;margin-top:16px; }
+.msg-admin { padding:10px 12px;margin:4px 0;border-radius:12px;background:var(--bg4);font-size:13px; }
+.msg-admin strong { color:var(--accent); }
+.msg-admin small { color:var(--text3); }
+#root { display:flex;flex-direction:column;height:100dvh; }
+.admin-body { flex:1;overflow-y:auto;display:flex;flex-direction:column; }
 </style>
 </head>
 <body>
 <div id="toast"></div>
 <div id="root">
   <div class="topbar">
-    <button class="back-btn btn" onclick="window.go('profile.html')"><i class="fas fa-arrow-left"></i></button>
+    <button class="back-btn btn" onclick="go('profile.html')"><i class="fas fa-arrow-left"></i></button>
     <div class="topbar-title"><i class="fas fa-shield-halved" style="color:var(--yellow);"></i> Admin Panel</div>
     <div style="width:38px;"></div>
   </div>
   <div class="admin-tabs">
-    <button class="tab-btn active" id="tab-users-btn">👥 Users</button>
-    <button class="tab-btn" id="tab-communications-btn">💬 Communications</button>
-    <button class="tab-btn" id="tab-online-btn">🟢 Online</button>
+    <button class="tab-btn active" id="tab-users-btn" onclick="switchTab('users')">👥 Users</button>
+    <button class="tab-btn" id="tab-communications-btn" onclick="switchTab('communications')">💬 Chats</button>
+    <button class="tab-btn" id="tab-online-btn" onclick="switchTab('online')">🟢 Online</button>
   </div>
-  <div class="tab-content" id="tab-users">
-    <div class="search-box">
-      <input type="text" id="user-search" class="inp" placeholder="Search by name/email/code..." oninput="window.filterUsers()">
-    </div>
-    <div style="overflow-x:auto;">
-      <table class="user-table" id="users-table">
-        <thead><tr><th>User</th><th>Code</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
-        <tbody id="users-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-  <div class="tab-content hidden" id="tab-communications">
-    <div class="search-box">
-      <input type="text" id="comm-search" class="inp" placeholder="Select user to view conversation..." oninput="window.searchUsersForComm()">
-    </div>
-    <div id="user-select-list"></div>
-    <div id="conversation-container" class="hidden">
-      <h4>Conversation with <span id="conv-with"></span></h4>
-      <div class="conversation-view" id="conv-messages"></div>
-      <div style="display:flex;gap:8px;margin-top:12px;">
-        <input type="text" id="admin-msg-inp" class="inp" placeholder="Send violation message...">
-        <button class="btn btn-primary" onclick="window.sendAdminMessage()">Send</button>
+  <div class="admin-body">
+    <!-- Users Tab -->
+    <div class="tab-content" id="tab-users">
+      <div class="search-box">
+        <input type="text" id="user-search" class="inp" placeholder="Search by name / email / code…" oninput="filterUsers()">
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="user-table" id="users-table">
+          <thead><tr><th>User</th><th>Code</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+          <tbody id="users-tbody"><tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px;">Loading…</td></tr></tbody>
+        </table>
       </div>
     </div>
-  </div>
-  <div class="tab-content hidden" id="tab-online">
-    <div id="online-users-list"></div>
+
+    <!-- Communications Tab -->
+    <div class="tab-content hidden" id="tab-communications">
+      <div class="search-box">
+        <input type="text" id="comm-search" class="inp" placeholder="Search user to view conversation…" oninput="searchUsersForComm()">
+      </div>
+      <div id="user-select-list"></div>
+      <div id="conversation-container" class="hidden">
+        <h4 style="margin-bottom:12px;">Conversation with <span id="conv-with" style="color:var(--accent);"></span></h4>
+        <div class="conversation-view" id="conv-messages"></div>
+        <div style="display:flex;gap:8px;margin-top:12px;">
+          <input type="text" id="admin-msg-inp" class="inp" placeholder="Send message as Admin…">
+          <button class="btn btn-primary" onclick="sendAdminMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Online Tab -->
+    <div class="tab-content hidden" id="tab-online">
+      <div id="online-users-list"><p style="color:var(--text3);">Loading…</p></div>
+    </div>
   </div>
 </div>
 
@@ -73,177 +87,195 @@
 import {
   auth, db, ref, get, set, push, onValue, onAuthStateChanged,
   go, toast, getAllUsers, setVerifiedBadge, banUser, sendSystemMessage, isAdmin,
-  ADMIN_UID, colorFor, initialsOf, generateUserCode, chatId
+  ADMIN_UID, ADMIN_EMAIL, colorFor, initialsOf, generateUserCode, chatId, searchUsers
 } from './firebase.js';
 
 let me = null;
 let allUsersData = [];
 let selectedUserId = null;
-
-// ==== Global Functions ====
+let selectedUserName = '';
 window.go = go;
+
+// ── Auth Guard ──
+onAuthStateChanged(auth, async user => {
+  if (!user) return go('index.html');
+  const admin = await isAdmin(user.uid) || user.email === ADMIN_EMAIL;
+  if (!admin) {
+    toast('Access denied', 'error');
+    return go('profile.html');
+  }
+  me = user;
+  loadAllUsers();
+  loadOnlineUsers();
+});
+
+// ── Tab Switching ──
+window.switchTab = tab => {
+  ['users', 'communications', 'online'].forEach(t => {
+    document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
+    document.getElementById(`tab-${t}-btn`).classList.toggle('active', t === tab);
+  });
+};
+
+// ── Users Tab ──
 window.filterUsers = () => {
   const q = document.getElementById('user-search').value.toLowerCase();
-  const filtered = allUsersData.filter(u => 
-    (u.name||'').toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q) || (u.friendCode||'').toLowerCase().includes(q)
+  const filtered = allUsersData.filter(u =>
+    (u.name || '').toLowerCase().includes(q) ||
+    (u.email || '').toLowerCase().includes(q) ||
+    (u.friendCode || '').toLowerCase().includes(q)
   );
   renderUsersTable(filtered);
 };
 
-window.sendMsgToUser = async (uid) => {
-  const msg = prompt('Enter message to send as admin:');
-  if(!msg) return;
-  await sendSystemMessage(ADMIN_UID, uid, `[Admin] ${msg}`);
-  toast('Message sent');
-};
-
-window.toggleVerify = async (uid, val) => {
-  await setVerifiedBadge(uid, val);
-  toast(`User ${val?'verified':'unverified'}`);
-  loadAllUsers();
-};
-
-window.warnUser = async (uid) => {
-  const reason = prompt('Warning message:');
-  if(!reason) return;
-  await push(ref(db,`users/${uid}/warnings`), { reason, ts: Date.now() });
-  toast('Warning sent');
-};
-
-window.toggleBan = async (uid, ban) => {
-  await banUser(uid, ban);
-  toast(`User ${ban?'banned':'unbanned'}`);
-  loadAllUsers();
-};
-
-window.searchUsersForComm = async () => {
-  const q = document.getElementById('comm-search').value.trim();
-  if(!q) { document.getElementById('user-select-list').innerHTML=''; return; }
-  const { searchUsers } = await import('./firebase.js');
-  const results = await searchUsers(q);
-  const list = document.getElementById('user-select-list');
-  list.innerHTML = results.map(u => `
-    <div class="list-item" onclick="window.selectUserForComm('${u.uid}','${u.name}')">
-      <span>${u.name} (${u.email})</span>
-      <i class="fas fa-chevron-right"></i>
-    </div>
-  `).join('');
-};
-
-window.selectUserForComm = (uid, name) => {
-  selectedUserId = uid;
-  document.getElementById('conv-with').textContent = name;
-  document.getElementById('conversation-container').classList.remove('hidden');
-  const cid = chatId(ADMIN_UID, uid);
-  onValue(ref(db,`chats/${cid}/messages`), snap => {
-    const msgs = snap.val() || {};
-    const sorted = Object.values(msgs).sort((a,b) => a.ts - b.ts);
-    const html = sorted.map(m => `
-      <div class="msg-admin">
-        <strong>${m.senderId===ADMIN_UID?'Admin':name}:</strong> ${m.text||'📎 media'}<br>
-        <small>${new Date(m.ts).toLocaleTimeString()}</small>
-      </div>
-    `).join('');
-    document.getElementById('conv-messages').innerHTML = html || '<i>No messages</i>';
-  });
-};
-
-window.sendAdminMessage = async () => {
-  const inp = document.getElementById('admin-msg-inp');
-  const text = inp.value.trim();
-  if(!text || !selectedUserId) return;
-  await sendSystemMessage(ADMIN_UID, selectedUserId, `[Admin] ${text}`);
-  inp.value = '';
-  toast('Sent');
-};
-
-// ==== Render Functions ====
 function renderUsersTable(users) {
   const tbody = document.getElementById('users-tbody');
+  if (!users.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px;">No users found</td></tr>`;
+    return;
+  }
   tbody.innerHTML = users.map(u => `
     <tr>
       <td>
         <div style="display:flex;align-items:center;gap:8px;">
-          <span>${u.name||'?'}</span>
-          ${u.verified?`<img src="https://i.ibb.co/W4fjDGmD/32539-removebg-preview.png" style="width:14px;">`:''}
+          <div style="width:32px;height:32px;border-radius:50%;background:${u.color || colorFor(u.uid)};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0;">
+            ${u.photo ? `<img src="${u.photo}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">` : (u.initials || initialsOf(u.name || '?'))}
+          </div>
+          <div>
+            <div style="font-weight:700;">${u.name || '?'} ${u.verified ? '✅' : ''}</div>
+            <div style="font-size:11px;color:var(--text2);">${u.email || ''}</div>
+          </div>
         </div>
-        <small style="color:var(--text2);">${u.email}</small>
       </td>
-      <td><code>${u.friendCode}</code></td>
+      <td><code style="font-size:12px;background:var(--bg3);padding:3px 7px;border-radius:6px;">${u.friendCode || '—'}</code></td>
       <td>
-        <span class="online-dot-admin ${u.online?'':'offline-dot'}"></span>
-        ${u.online?'Online':'Offline'}<br>
-        <small>${u.passcodeSet?'PIN ✓':'No PIN'}</small>
+        <span class="online-dot-admin ${u.online ? '' : 'offline-dot'}"></span>
+        ${u.online ? '<span style="color:var(--green);font-size:12px;">Online</span>' : '<span style="font-size:12px;color:var(--text3);">Offline</span>'}
+        <br><small style="color:var(--text3);">${u.passcodeSet ? 'PIN ✓' : 'No PIN'}</small>
+        ${u.banned ? '<br><span style="color:var(--red);font-size:11px;">BANNED</span>' : ''}
       </td>
-      <td>${u.joinDate}</td>
-      <td>
-        <button class="action-btn" onclick="window.sendMsgToUser('${u.uid}')"><i class="fas fa-paper-plane"></i></button>
-        <button class="action-btn" onclick="window.toggleVerify('${u.uid}', ${!u.verified})">${u.verified?'✅':'☑️'}</button>
-        <button class="action-btn" onclick="window.warnUser('${u.uid}')"><i class="fas fa-exclamation"></i></button>
-        <button class="action-btn danger" onclick="window.toggleBan('${u.uid}', ${!u.banned})">${u.banned?'🔓':'🔒'}</button>
+      <td style="font-size:12px;color:var(--text2);">${u.joinDate || 'N/A'}</td>
+      <td style="white-space:nowrap;">
+        <button class="action-btn" title="Message" onclick="adminSendMsg('${u.uid}')"><i class="fas fa-paper-plane"></i></button>
+        <button class="action-btn ${u.verified ? 'success' : ''}" title="${u.verified ? 'Remove verify' : 'Verify'}" onclick="toggleVerify('${u.uid}', ${!u.verified})">${u.verified ? '✅' : '☑️'}</button>
+        <button class="action-btn" title="Warn" onclick="warnUser('${u.uid}')"><i class="fas fa-exclamation"></i></button>
+        <button class="action-btn danger" title="${u.banned ? 'Unban' : 'Ban'}" onclick="toggleBan('${u.uid}', ${!u.banned})">${u.banned ? '🔓' : '🔒'}</button>
       </td>
     </tr>
   `).join('');
 }
 
 async function loadAllUsers() {
-  allUsersData = await getAllUsers();
-  for(const u of allUsersData) {
-    const banSnap = await get(ref(db,`admin/banned/${u.uid}`));
-    u.banned = banSnap.val() === true;
+  try {
+    allUsersData = await getAllUsers();
+    for (const u of allUsersData) {
+      const banSnap = await get(ref(db, `admin/banned/${u.uid}`));
+      u.banned = banSnap.val() === true;
+      u.passcodeSet = !!(u.passcode);
+    }
+    renderUsersTable(allUsersData);
+  } catch (e) {
+    toast('Failed to load users', 'error');
   }
-  renderUsersTable(allUsersData);
 }
 
-function loadOnlineUsers() {
-  onValue(ref(db,'users'), snap => {
-    const users = snap.val() || {};
-    const online = Object.entries(users).filter(([_,u]) => u.online);
-    const list = document.getElementById('online-users-list');
-    list.innerHTML = online.map(([uid,u]) => `
-      <div class="list-item">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span class="online-dot-admin"></span>
-          <div>${u.name||'User'} (${u.email})</div>
-        </div>
-        <small>${generateUserCode(uid)}</small>
-      </div>
-    `).join('') || '<p>No online users</p>';
-  });
-}
+window.adminSendMsg = async uid => {
+  const msg = prompt('Enter message to send as Admin:');
+  if (!msg) return;
+  await sendSystemMessage(ADMIN_UID, uid, `[Admin] ${msg}`);
+  toast('Message sent ✓', 'ok');
+};
 
-// ==== Auth & Init ====
-onAuthStateChanged(auth, async user => {
-  if(!user) return go('index.html');
-  if(!await isAdmin(user.uid) && user.email!=='admin@chatcity.com') {
-    toast('Access denied', 'error');
-    return go('profile.html');
-  }
-  me = user;
-  initTabs();
+window.toggleVerify = async (uid, val) => {
+  await setVerifiedBadge(uid, val);
+  toast(`User ${val ? 'verified ✅' : 'unverified'}`, 'ok');
   loadAllUsers();
-  loadOnlineUsers();
-});
+};
 
-function initTabs() {
-  const tabs = {
-    'tab-users-btn': 'tab-users',
-    'tab-communications-btn': 'tab-communications',
-    'tab-online-btn': 'tab-online'
-  };
-  Object.entries(tabs).forEach(([btnId, tabId]) => {
-    document.getElementById(btnId).addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById(btnId).classList.add('active');
-      document.getElementById('tab-users').classList.add('hidden');
-      document.getElementById('tab-communications').classList.add('hidden');
-      document.getElementById('tab-online').classList.add('hidden');
-      document.getElementById(tabId).classList.remove('hidden');
-    });
+window.warnUser = async uid => {
+  const reason = prompt('Warning message:');
+  if (!reason) return;
+  await push(ref(db, `users/${uid}/warnings`), { reason, ts: Date.now(), by: me.uid });
+  await sendSystemMessage(ADMIN_UID, uid, `[Admin Warning] ${reason}`);
+  toast('Warning sent', 'ok');
+};
+
+window.toggleBan = async (uid, ban) => {
+  await banUser(uid, ban);
+  toast(`User ${ban ? 'banned 🔒' : 'unbanned 🔓'}`, 'ok');
+  loadAllUsers();
+};
+
+// ── Communications Tab ──
+let commSearchTimer = null;
+window.searchUsersForComm = () => {
+  clearTimeout(commSearchTimer);
+  const q = document.getElementById('comm-search').value.trim();
+  if (!q) { document.getElementById('user-select-list').innerHTML = ''; return; }
+  commSearchTimer = setTimeout(async () => {
+    const results = await searchUsers(q);
+    const list = document.getElementById('user-select-list');
+    list.innerHTML = results.map(u => `
+      <div class="list-item" onclick="selectUserForComm('${u.uid}','${encodeURIComponent(u.name || 'User')}')">
+        <div style="flex:1;">${u.name || 'User'} <span style="color:var(--text3);font-size:12px;">(${u.email || ''})</span></div>
+        <i class="fas fa-chevron-right" style="color:var(--accent);"></i>
+      </div>
+    `).join('') || '<p style="color:var(--text3);padding:12px;">No users found</p>';
+  }, 300);
+};
+
+window.selectUserForComm = (uid, nameEnc) => {
+  selectedUserId = uid;
+  selectedUserName = decodeURIComponent(nameEnc);
+  document.getElementById('conv-with').textContent = selectedUserName;
+  document.getElementById('conversation-container').classList.remove('hidden');
+  document.getElementById('user-select-list').innerHTML = '';
+  const cid = chatId(ADMIN_UID, uid);
+  onValue(ref(db, `chats/${cid}/messages`), snap => {
+    const msgs = Object.values(snap.val() || {}).sort((a, b) => a.ts - b.ts);
+    const container = document.getElementById('conv-messages');
+    container.innerHTML = msgs.map(m => `
+      <div class="msg-admin">
+        <strong>${m.senderId === ADMIN_UID ? 'Admin' : selectedUserName}:</strong>
+        ${m.text || (m.type === 'voice' ? '🎙 Voice' : m.type === 'image' ? '🖼 Photo' : '📎 Media')}
+        <br><small>${new Date(m.ts).toLocaleString()}</small>
+      </div>
+    `).join('') || '<i style="color:var(--text3);">No messages yet</i>';
+    container.scrollTop = container.scrollHeight;
+  });
+};
+
+window.sendAdminMessage = async () => {
+  const inp = document.getElementById('admin-msg-inp');
+  const text = inp.value.trim();
+  if (!text || !selectedUserId) return;
+  await sendSystemMessage(ADMIN_UID, selectedUserId, `[Admin] ${text}`);
+  inp.value = '';
+  toast('Message sent ✓', 'ok');
+};
+
+// ── Online Tab ──
+function loadOnlineUsers() {
+  onValue(ref(db, 'users'), snap => {
+    const users = snap.val() || {};
+    const online = Object.entries(users).filter(([, u]) => u.online);
+    const list = document.getElementById('online-users-list');
+    if (!online.length) {
+      list.innerHTML = '<p style="color:var(--text3);">No users online</p>';
+      return;
+    }
+    list.innerHTML = online.map(([uid, u]) => `
+      <div class="list-item">
+        <span class="online-dot-admin"></span>
+        <div style="flex:1;">
+          <div style="font-weight:700;">${u.name || 'User'}</div>
+          <div style="font-size:12px;color:var(--text2);">${u.email || ''}</div>
+        </div>
+        <code style="font-size:11px;color:var(--text3);">${generateUserCode(uid)}</code>
+      </div>
+    `).join('');
   });
 }
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 </body>
 </html>
