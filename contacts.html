@@ -28,6 +28,7 @@
 .code-card { margin:14px 16px;background:rgba(124,110,255,0.1);border:1px solid rgba(124,110,255,0.25);border-radius:var(--r2);padding:16px; }
 .code-badge { font-size:22px;font-weight:800;font-family:var(--font2);color:var(--accent);letter-spacing:4px;margin:8px 0; }
 .code-search-inp { flex:1;background:none;border:none;outline:none;color:var(--text);font-size:15px;font-family:var(--font2);letter-spacing:3px;font-weight:700; }
+.no-results { text-align:center;padding:40px 24px;color:var(--text3);font-size:13px; }
 </style>
 </head>
 <body>
@@ -58,7 +59,7 @@
       <div class="code-card">
         <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px;"><i class="fas fa-hashtag"></i> My Friend Code</div>
         <div class="code-badge" id="my-code">———————</div>
-        <div style="font-size:11px;color:var(--text2);margin-bottom:12px;">Share this 7-digit code to add friends</div>
+        <div style="font-size:11px;color:var(--text2);margin-bottom:12px;">Share this 7-character code to add friends</div>
         <div style="display:flex;gap:8px;">
           <button class="btn btn-primary" style="flex:1;padding:10px;" onclick="copyMyCode()"><i class="fas fa-copy"></i> Copy Code</button>
           <button class="btn btn-ghost" style="flex:1;padding:10px;" onclick="showAddByCode()"><i class="fas fa-user-plus"></i> Add by Code</button>
@@ -90,15 +91,18 @@
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-title"><i class="fas fa-user-plus" style="color:var(--accent);"></i> Add Friend by Code</div>
-    <div style="margin-bottom:16px;color:var(--text2);font-size:13px;text-align:center;">Enter your friend's 7-digit code</div>
+    <div style="margin-bottom:16px;color:var(--text2);font-size:13px;text-align:center;">Enter your friend's 7-character code</div>
     <div class="search-box" style="margin-bottom:16px;">
       <i class="fas fa-hashtag" style="color:var(--accent);"></i>
-      <input class="code-search-inp" type="text" id="code-inp" maxlength="7" placeholder="XXXXXXX" oninput="this.value=this.value.toUpperCase()">
+      <input class="code-search-inp" type="text" id="code-inp" maxlength="7" placeholder="XXXXXXX" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
     </div>
     <button class="btn btn-primary" style="width:100%;" id="add-code-btn" onclick="addByCode()"><i class="fas fa-user-plus"></i> Add Friend</button>
     <div id="code-err" class="errmsg" style="margin-top:10px;text-align:center;"></div>
   </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
 
 <script type="module">
 import {
@@ -107,165 +111,204 @@ import {
   searchUsers, generateUserCode, addFriendByCode, VERIFIED_BADGE
 } from './firebase.js';
 
-let me=null, myContacts={};
-window.go=go;
+let me = null, myContacts = {};
+window.go = go;
 
-onAuthStateChanged(auth, async user=>{
-  if(!user){ go('index.html'); return; }
-  const sess=getSession();
-  if(!sess||sess.uid!==user.uid){ go('index.html'); return; }
-  me=user;
+onAuthStateChanged(auth, async user => {
+  if (!user) { go('index.html'); return; }
+  const sess = getSession();
+  if (!sess || sess.uid !== user.uid) { go('index.html'); return; }
+  me = user;
   await setOnline(me.uid);
   loadMyCode();
   loadContacts();
-  loadSuggestions();
 });
 
-async function loadMyCode() {
-  const code=generateUserCode(me.uid);
-  document.getElementById('my-code').textContent=code;
+function loadMyCode() {
+  const code = generateUserCode(me.uid);
+  document.getElementById('my-code').textContent = code;
 }
 
 window.copyMyCode = () => {
-  const code=document.getElementById('my-code').textContent;
-  navigator.clipboard.writeText(code).then(()=>toast('Friend code copied! 📋','ok'));
+  const code = document.getElementById('my-code').textContent;
+  navigator.clipboard.writeText(code)
+    .then(() => toast('Friend code copied! 📋', 'ok'))
+    .catch(() => toast('Copy failed', 'error'));
 };
 
 window.showAddByCode = () => {
   document.getElementById('add-code-modal').classList.add('show');
-  document.getElementById('code-inp').value='';
-  document.getElementById('code-err').textContent='';
+  document.getElementById('code-inp').value = '';
+  document.getElementById('code-err').textContent = '';
 };
 
-document.getElementById('add-code-modal').addEventListener('click',e=>{
-  if(e.target.id==='add-code-modal') e.target.classList.remove('show');
+document.getElementById('add-code-modal').addEventListener('click', e => {
+  if (e.target.id === 'add-code-modal') e.target.classList.remove('show');
 });
 
 window.addByCode = async () => {
-  const code=document.getElementById('code-inp').value.trim().toUpperCase();
-  const errEl=document.getElementById('code-err');
-  const btn=document.getElementById('add-code-btn');
-  if(code.length!==7){ errEl.textContent='Please enter a 7-digit code'; return; }
-  btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding…'; btn.disabled=true;
+  const code = document.getElementById('code-inp').value.trim().toUpperCase();
+  const errEl = document.getElementById('code-err');
+  const btn = document.getElementById('add-code-btn');
+  errEl.textContent = '';
+  if (code.length !== 7) { errEl.textContent = 'Please enter a 7-character code'; return; }
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding…';
+  btn.disabled = true;
   try {
-    const result=await addFriendByCode(me.uid,code);
-    toast(`${result.user.name} added! 🎉`,'ok');
+    const result = await addFriendByCode(me.uid, code);
+    toast(`${result.user.name} added! 🎉`, 'ok');
     document.getElementById('add-code-modal').classList.remove('show');
     loadContacts();
-  } catch(e) {
-    errEl.textContent='❌ '+e.message;
+  } catch (e) {
+    errEl.textContent = '❌ ' + e.message;
   } finally {
-    btn.innerHTML='<i class="fas fa-user-plus"></i> Add Friend'; btn.disabled=false;
+    btn.innerHTML = '<i class="fas fa-user-plus"></i> Add Friend';
+    btn.disabled = false;
   }
 };
 
 function loadContacts() {
-  onValue(ref(db,`users/${me.uid}/contacts`), async snap=>{
-    myContacts=snap.val()||{};
-    const list=document.getElementById('contacts-list');
-    list.innerHTML='';
-    const ids=Object.keys(myContacts);
-    if(!ids.length){ document.getElementById('no-contacts').classList.remove('hidden'); return; }
-    document.getElementById('no-contacts').classList.add('hidden');
-    for(const uid of ids) {
-      const u=(await get(ref(db,`users/${uid}`))).val();
-      if(!u) continue;
-      list.appendChild(buildContactItem({...u, uid}));
+  onValue(ref(db, `users/${me.uid}/contacts`), async snap => {
+    myContacts = snap.val() || {};
+    const list = document.getElementById('contacts-list');
+    list.innerHTML = '';
+    const ids = Object.keys(myContacts);
+    if (!ids.length) {
+      document.getElementById('no-contacts').classList.remove('hidden');
+      loadSuggestions();
+      return;
     }
+    document.getElementById('no-contacts').classList.add('hidden');
+    for (const uid of ids) {
+      try {
+        const uSnap = await get(ref(db, `users/${uid}`));
+        if (!uSnap.exists()) continue;
+        const u = { ...uSnap.val(), uid };
+        list.appendChild(buildContactItem(u));
+      } catch {}
+    }
+    loadSuggestions();
   });
 }
 
 function loadSuggestions() {
-  onValue(ref(db,'users'), async snap=>{
-    const all=snap.val()||{};
-    const list=document.getElementById('suggestions-list');
-    list.innerHTML='';
-    const ids=Object.keys(all).filter(uid=>uid!==me.uid&&!myContacts[uid]);
-    const limited=ids.slice(0,10);
-    if(!limited.length){ document.getElementById('no-suggestions').classList.remove('hidden'); return; }
+  onValue(ref(db, 'users'), async snap => {
+    const all = snap.val() || {};
+    const list = document.getElementById('suggestions-list');
+    list.innerHTML = '';
+    const ids = Object.keys(all).filter(uid => uid !== me.uid && !myContacts[uid]);
+    const limited = ids.slice(0, 10);
+    if (!limited.length) {
+      document.getElementById('no-suggestions').classList.remove('hidden');
+      return;
+    }
     document.getElementById('no-suggestions').classList.add('hidden');
-    for(const uid of limited) {
-      const u=all[uid]; if(!u) continue;
-      u.uid=uid;
-      list.appendChild(buildSuggestionItem(u));
+    for (const uid of limited) {
+      const u = all[uid];
+      if (!u) continue;
+      list.appendChild(buildSuggestionItem({ ...u, uid }));
     }
   });
 }
 
 function buildContactItem(u) {
-  const item=document.createElement('div');
-  item.className='contact-item';
-  const avHtml=u.photo
+  const item = document.createElement('div');
+  item.className = 'contact-item';
+  const avHtml = u.photo
     ? `<img src="${u.photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
-    : `<div style="background:${u.color||colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials||initialsOf(u.name||'?')}</div>`;
-  item.onclick=()=>startChat(u.uid,u.name,u.initials||initialsOf(u.name||'?'),u.color||colorFor(u.uid),u.photo||'');
-  item.innerHTML=`<div class="c-av">${avHtml}</div>
+    : `<div style="background:${u.color || colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials || initialsOf(u.name || '?')}</div>`;
+  item.onclick = () => startChat(u);
+  item.innerHTML = `<div class="c-av">${avHtml}</div>
     <div class="c-info">
-      <div class="c-name">${u.name||'User'} ${u.verified?`<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;margin-left:3px;">`:''}</div>
-      <div class="c-sub"><i class="fas fa-envelope" style="font-size:10px;"></i> ${u.email||''}</div>
+      <div class="c-name">${u.name || 'User'} ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;margin-left:3px;">` : ''}</div>
+      <div class="c-sub"><i class="fas fa-envelope" style="font-size:10px;"></i> ${u.email || ''}</div>
     </div>
     <i class="fas fa-chevron-right" style="color:var(--accent);font-size:16px;"></i>`;
   return item;
 }
 
 function buildSuggestionItem(u) {
-  const item=document.createElement('div');
-  item.className='contact-item';
-  const avHtml=u.photo
+  const item = document.createElement('div');
+  item.className = 'contact-item';
+  const avHtml = u.photo
     ? `<img src="${u.photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
-    : `<div style="background:${u.color||colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials||initialsOf(u.name||'?')}</div>`;
-  item.innerHTML=`<div class="c-av">${avHtml}</div>
-    <div class="c-info"><div class="c-name">${u.name||'User'} ${u.verified?`<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;">`:''}</div><div class="c-sub">${u.email||''}</div></div>
-    <button class="chat-btn" onclick="startChat('${u.uid}','${u.name}','${u.initials||initialsOf(u.name||'?')}','${u.color||colorFor(u.uid)}','${u.photo||''}');event.stopPropagation();"><i class="fas fa-comment"></i> Chat</button>`;
+    : `<div style="background:${u.color || colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials || initialsOf(u.name || '?')}</div>`;
+  const btn = document.createElement('button');
+  btn.className = 'chat-btn';
+  btn.innerHTML = '<i class="fas fa-comment"></i> Chat';
+  btn.onclick = e => { e.stopPropagation(); startChat(u); };
+  item.innerHTML = `<div class="c-av">${avHtml}</div>
+    <div class="c-info"><div class="c-name">${u.name || 'User'} ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;">` : ''}</div><div class="c-sub">${u.email || ''}</div></div>`;
+  item.appendChild(btn);
   return item;
 }
 
-window.startChat=(uid,name,initials,color,photo)=>{
-  sessionStorage.setItem('cc_chat_target',JSON.stringify({uid,name,initials,color,photo}));
-  go('chat.html');
-};
+function buildSearchResult(u) {
+  const item = document.createElement('div');
+  item.className = 'contact-item';
+  const avHtml = u.photo
+    ? `<img src="${u.photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
+    : `<div style="background:${u.color || colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials || initialsOf(u.name || '?')}</div>`;
+  const btn = document.createElement('button');
+  btn.className = 'chat-btn';
+  btn.innerHTML = '<i class="fas fa-comment"></i> Chat';
+  btn.onclick = e => { e.stopPropagation(); startChat(u); };
+  item.innerHTML = `<div class="c-av">${avHtml}</div>
+    <div class="c-info"><div class="c-name">${u.name || 'User'} ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;">` : ''}</div><div class="c-sub">${u.email || ''}</div></div>`;
+  item.appendChild(btn);
+  return item;
+}
 
-let searchTimer=null;
-window.doSearch=async()=>{
-  const q=document.getElementById('search').value.trim();
-  const loading=document.getElementById('search-loading');
-  const clearBtn=document.getElementById('clear-btn');
-  clearBtn.classList.toggle('hidden',!q);
-  if(!q){ document.getElementById('search-results').classList.add('hidden'); document.getElementById('default-content').style.display=''; return; }
+function startChat(u) {
+  sessionStorage.setItem('cc_chat_target', JSON.stringify({
+    uid: u.uid,
+    name: u.name || 'User',
+    initials: u.initials || initialsOf(u.name || '?'),
+    color: u.color || colorFor(u.uid),
+    photo: u.photo || ''
+  }));
+  go('chat.html');
+}
+
+let searchTimer = null;
+window.doSearch = () => {
+  const q = document.getElementById('search').value.trim();
+  const loading = document.getElementById('search-loading');
+  const clearBtn = document.getElementById('clear-btn');
+  clearBtn.classList.toggle('hidden', !q);
+  if (!q) {
+    document.getElementById('search-results').classList.add('hidden');
+    document.getElementById('default-content').style.display = '';
+    return;
+  }
   clearTimeout(searchTimer);
-  loading.style.display='inline';
-  document.getElementById('default-content').style.display='none';
-  searchTimer=setTimeout(async()=>{
+  loading.style.display = 'inline';
+  document.getElementById('default-content').style.display = 'none';
+  searchTimer = setTimeout(async () => {
     try {
-      const results=await searchUsers(q, me.uid);
-      const list=document.getElementById('results-list');
-      list.innerHTML='';
+      const results = await searchUsers(q, me.uid);
+      const list = document.getElementById('results-list');
+      list.innerHTML = '';
       document.getElementById('search-results').classList.remove('hidden');
-      if(!results.length) { list.innerHTML=`<div class="no-results"><i class="fas fa-search" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px;"></i> No users found for "${q}"</div>`; }
-      else results.forEach(u=>list.appendChild(buildSearchResult(u)));
-    } catch(e) { toast('Search error: '+e.message,'error'); }
-    finally { loading.style.display='none'; }
+      if (!results.length) {
+        list.innerHTML = `<div class="no-results"><i class="fas fa-search" style="font-size:32px;opacity:.3;display:block;margin-bottom:8px;"></i> No users found for "${q}"</div>`;
+      } else {
+        results.forEach(u => list.appendChild(buildSearchResult(u)));
+      }
+    } catch (e) {
+      toast('Search error: ' + e.message, 'error');
+    } finally {
+      loading.style.display = 'none';
+    }
   }, 350);
 };
 
-window.clearSearch=()=>{
-  document.getElementById('search').value='';
+window.clearSearch = () => {
+  document.getElementById('search').value = '';
   document.getElementById('search-results').classList.add('hidden');
   document.getElementById('clear-btn').classList.add('hidden');
-  document.getElementById('default-content').style.display='';
+  document.getElementById('default-content').style.display = '';
 };
-
-function buildSearchResult(u) {
-  const item=document.createElement('div');
-  item.className='contact-item';
-  const avHtml=u.photo
-    ? `<img src="${u.photo}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">`
-    : `<div style="background:${u.color||colorFor(u.uid)};width:48px;height:48px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;">${u.initials||initialsOf(u.name||'?')}</div>`;
-  item.innerHTML=`<div class="c-av">${avHtml}</div>
-    <div class="c-info"><div class="c-name">${u.name||'User'} ${u.verified?`<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;">`:''}</div><div class="c-sub">${u.email||''}</div></div>
-    <button class="chat-btn" onclick="startChat('${u.uid}','${u.name}','${u.initials||initialsOf(u.name||'?')}','${u.color||colorFor(u.uid)}','${u.photo||''}');event.stopPropagation();"><i class="fas fa-comment"></i> Chat</button>`;
-  return item;
-}
 </script>
 </body>
 </html>
