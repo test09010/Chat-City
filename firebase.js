@@ -128,10 +128,10 @@ export const initFCM = async uid => {
       console.warn('⚠️ [FCM] Service Worker registration failed:', e.message);
     }
 
-    // Import Firebase Messaging
-    const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js');
-    
-    const messaging = getMessaging(app);
+    // ✅ FIXED: Import Firebase Messaging
+const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js');
+
+const messaging = getMessaging(app);
 
     // Get FCM token
     try {
