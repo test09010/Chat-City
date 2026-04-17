@@ -299,9 +299,20 @@ const sendSystemMessage = async (fromAdminUid, targetUid, text) => {
 };
 
 const isAdmin = async uid => {
-  if (uid === ADMIN_UID) return true;
-  const snap = await get(ref(db, `admins/${uid}`));
-  return snap.val() === true;
+  // ✅ Admin Email check করুন
+  try {
+    const snap = await get(ref(db, `users/${uid}`));
+    const user = snap.val();
+    
+    if (user?.email === ADMIN_EMAIL) return true;
+    
+    // ✅ Database admins list এও check করুন
+    const adminSnap = await get(ref(db, `admins/${uid}`));
+    return adminSnap.val() === true;
+  } catch (e) {
+    console.error('Admin check error:', e);
+    return false;
+  }
 };
 
 // ═══════════════════════════════════════════════════════════
