@@ -20,10 +20,10 @@ export const db = getDatabase(app);
 // Google Auth Provider
 export const gProvider = new GoogleAuthProvider();
 
-// ✅ EXPORTS - Database Functions
+// ✅ ALL EXPORTS - Database Functions
 export { ref, get, set, push, update, remove, onValue, off, onDisconnect };
 
-// ✅ EXPORTS - Auth Functions
+// ✅ ALL EXPORTS - Auth Functions  
 export { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword };
 export { onAuthStateChanged, signOut, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail };
 
