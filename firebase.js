@@ -16,14 +16,10 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getDatabase(app);
-
-// Google Auth Provider
 export const gProvider = new GoogleAuthProvider();
 
-// ✅ ALL EXPORTS - Database Functions
+// ✅ PROPER EXPORTS
 export { ref, get, set, push, update, remove, onValue, off, onDisconnect };
-
-// ✅ ALL EXPORTS - Auth Functions  
 export { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword };
 export { onAuthStateChanged, signOut, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail };
 
@@ -62,9 +58,10 @@ export const escHtml = str => {
   return String(str).replace(/[&<>"']/g, m => map[m]);
 };
 
-export const VERIFIED_BADGE = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232dd4a0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
+// ✅ FIXED VERIFIED BADGE
+export const VERIFIED_BADGE = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232dd4a0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
 
-// ── Session Management ──
+// ── Session ──
 const SESSION_KEY = 'cc_session';
 
 export const saveSession = (uid, passcode) => {
@@ -78,10 +75,9 @@ export const getSession = () => {
 
 export const clearSession = () => localStorage.removeItem(SESSION_KEY);
 
-// ── Navigation ──
+// ── Navigation & Toast ──
 export const go = path => { window.location.href = path; };
 
-// ── Toast ──
 export const toast = (msg, type = 'info') => {
   const el = document.getElementById('toast') || document.createElement('div');
   if (!el.id) { el.id = 'toast'; document.body.appendChild(el); }
@@ -97,36 +93,24 @@ export const setOnline = async uid => {
   onDisconnect(userRef).set({ online: false, lastSeen: Date.now() }, { merge: true });
 };
 
-// ✅ FCM NOTIFICATION SETUP
+// ── FCM Init ──
 export const initFCM = async uid => {
-  console.log('🔔 [FCM] Initializing FCM for user:', uid);
+  console.log('🔔 [FCM] Initializing for:', uid);
   
   try {
-    if (!('serviceWorker' in navigator)) {
-      console.warn('⚠️ [FCM] Service Workers not supported');
-      return;
-    }
-
-    if (!('Notification' in window)) {
-      console.warn('⚠️ [FCM] Notifications not supported');
-      return;
-    }
-
+    if (!('serviceWorker' in navigator) || !('Notification' in window)) return;
+    
     if (Notification.permission === 'default') {
-      console.log('📋 [FCM] Requesting permission...');
       await Notification.requestPermission();
     }
-
-    if (Notification.permission !== 'granted') {
-      console.warn('⚠️ [FCM] Permission not granted:', Notification.permission);
-      return;
-    }
+    
+    if (Notification.permission !== 'granted') return;
 
     try {
       await navigator.serviceWorker.register('firebase-messaging-sw.js');
       console.log('✅ [FCM] Service Worker registered');
     } catch (e) {
-      console.warn('⚠️ [FCM] Service Worker registration failed:', e.message);
+      console.warn('⚠️ [FCM] SW error:', e.message);
     }
 
     const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js');
@@ -139,15 +123,13 @@ export const initFCM = async uid => {
       });
 
       if (token) {
-        console.log('✅ [FCM] Token received:', token.substring(0, 30) + '...');
+        console.log('✅ [FCM] Token:', token.substring(0, 20) + '...');
         await set(ref(db, `users/${uid}/fcmToken`), token);
-        console.log('✅ [FCM] Token saved to database');
 
         onMessage(messaging, payload => {
-          console.log('📬 [FCM] Foreground message:', payload);
           if (payload.notification) {
             const { title, body } = payload.notification;
-            if ('Notification' in window && Notification.permission === 'granted') {
+            if (Notification.permission === 'granted') {
               new Notification(title, {
                 body,
                 icon: 'https://cdn-icons-png.flaticon.com/512/3048/3048122.png',
@@ -158,81 +140,57 @@ export const initFCM = async uid => {
             }
           }
         });
-      } else {
-        console.warn('⚠️ [FCM] No token received');
       }
     } catch (e) {
       console.error('❌ [FCM] Token error:', e.message);
     }
   } catch (e) {
-    console.error('❌ [FCM] Init error:', e);
+    console.error('❌ [FCM] Error:', e);
   }
 };
 
-// ✅ SEND PUSH NOTIFICATION
+// ── Send Push ──
 export const sendPushToUser = async (receiverUid, title, body, url = 'home.html') => {
   try {
-    console.log('📤 [PUSH] Sending to:', receiverUid, '| Title:', title);
-    
     const snap = await get(ref(db, `users/${receiverUid}`));
     const u = snap.val();
-    
-    if (!u) {
-      console.warn('⚠️ [PUSH] User not found:', receiverUid);
-      return;
-    }
+    if (!u?.fcmToken) return;
 
-    const token = u.fcmToken;
-    if (!token) {
-      console.warn('⚠️ [PUSH] No FCM token for user:', receiverUid);
-      return;
-    }
-
-    console.log('📨 [PUSH] Token found, sending via backend...');
-    
     const response = await fetch(`${BACKEND_URL}/api/sendPush`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, title, body, url })
+      body: JSON.stringify({ token: u.fcmToken, title, body, url })
     });
 
-    const result = await response.json();
-    
     if (response.ok) {
-      console.log('✅ [PUSH] Sent successfully:', result.messageId);
-    } else {
-      console.error('❌ [PUSH] Backend error:', result);
+      console.log('✅ [PUSH] Sent');
     }
   } catch (e) {
     console.error('❌ [PUSH] Error:', e.message);
   }
 };
 
-// ── Admin Check ──
+// ── Admin ──
 export const isAdmin = async uid => {
   try {
     const snap = await get(ref(db, `users/${uid}`));
-    const user = snap.val();
-    
-    if (user?.email === ADMIN_EMAIL) return true;
-    
+    if (snap.val()?.email === ADMIN_EMAIL) return true;
     const adminSnap = await get(ref(db, `admins/${uid}`));
     return adminSnap.val() === true;
-  } catch (e) {
+  } catch {
     return false;
   }
 };
 
-// ── User Utilities ──
+// ── User Functions ──
 export const generateUserCode = uid => uid.substring(0, 8).toUpperCase();
 
 export const createUserSearchIndex = async (uid, userData) => {
   const code = generateUserCode(uid);
-  const name = userData.name || '';
   await set(ref(db, `users/${uid}`), {
     ...userData,
     friendCode: code,
-    searchIndex: name.toLowerCase()
+    searchIndex: (userData.name || '').toLowerCase()
   });
 };
 
@@ -241,18 +199,14 @@ export const updateUserSearchIndex = async (uid, userData) => {
   await set(ref(db, `users/${uid}/friendCode`), code);
 };
 
-export const validateEmail = email => {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
-};
+export const validateEmail = email => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 export const findUserByCode = async code => {
   const snap = await get(ref(db, 'users'));
   let found = null;
   snap.forEach(child => {
-    const u = child.val();
     if (generateUserCode(child.key) === code.toUpperCase()) {
-      found = { uid: child.key, ...u };
+      found = { uid: child.key, ...child.val() };
     }
   });
   return found;
