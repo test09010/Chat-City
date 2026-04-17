@@ -7,8 +7,8 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
-#root { display:flex; flex-direction:column; height:100dvh; }
-.page-content { flex:1; overflow-y:auto; padding-bottom:8px; }
+#root { display:flex;flex-direction:column;height:100dvh; }
+.page-content { flex:1;overflow-y:auto;padding-bottom:8px; }
 .chat-item { display:flex;align-items:center;gap:13px;padding:13px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s;position:relative; }
 .chat-item:active { background:var(--bg3); }
 .chat-av-wrap { position:relative;flex-shrink:0; }
@@ -24,7 +24,7 @@
 .empty h3 { font-size:18px;font-weight:700;color:var(--text2);margin-bottom:8px; }
 .empty p { font-size:13px;line-height:1.6; }
 .search-wrap { padding:10px 16px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5; }
-.search-inp { width:100%;padding:10px 16px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:30px;color:var(--text);font-family:var(--font);font-size:14px;outline:none; }
+.search-inp { width:100%;padding:10px 16px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:30px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;transition:border-color .2s; }
 .search-inp:focus { border-color:var(--accent); }
 .search-inp::placeholder { color:var(--text3); }
 </style>
@@ -71,6 +71,9 @@
   </nav>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+
 <script type="module">
 import {
   auth, db, ref, get, onValue, onAuthStateChanged,
@@ -80,14 +83,15 @@ import {
 
 let me = null;
 let allChats = [];
+let dotListeners = [];
 window.go = go;
 
 function checkPermissions() {
   const banners = document.getElementById('perm-banners');
   banners.innerHTML = '';
-  if(!('Notification' in window)) return;
-  if(Notification.permission === 'default') {
-    banners.innerHTML += `<div class="perm-banner" onclick="requestNotifPerm()">
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    banners.innerHTML = `<div class="perm-banner" onclick="requestNotifPerm()">
       <i class="fas fa-bell"></i> চ্যাট নোটিফিকেশন পেতে এখানে চাপ দিয়ে পারমিশন অন করুন
     </div>`;
   }
@@ -95,31 +99,41 @@ function checkPermissions() {
 
 window.requestNotifPerm = async () => {
   const result = await Notification.requestPermission();
-  if(result === 'granted') {
+  if (result === 'granted') {
     toast('নোটিফিকেশন চালু হয়েছে ✓', 'ok');
     checkPermissions();
+    initFCM(me.uid);
   }
 };
 
 onAuthStateChanged(auth, async user => {
-  if(!user) { go('index.html'); return; }
+  if (!user) { go('index.html'); return; }
   const sess = getSession();
-  if(!sess || sess.uid !== user.uid) { go('index.html'); return; }
+  if (!sess || sess.uid !== user.uid) { go('index.html'); return; }
   me = user;
-  initFCM(user.uid);
   await init();
   checkPermissions();
 });
 
 async function init() {
   await setOnline(me.uid);
+  initFCM(me.uid);
+
   const snap = await get(ref(db, `users/${me.uid}`));
   const u = snap.val() || {};
+
+  // Redirect if banned
+  if (u.banned) {
+    await import('./firebase.js').then(m => { m.signOut(m.auth); m.clearSession(); });
+    go('index.html');
+    return;
+  }
+
   const av = document.getElementById('my-av');
-  if(u.photo) {
-    av.innerHTML = `<img src="${u.photo}" alt="">`;
+  if (u.photo) {
+    av.innerHTML = `<img src="${u.photo}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
   } else {
-    av.textContent = u.initials || initialsOf(me.displayName||me.email||'?');
+    av.textContent = u.initials || initialsOf(me.displayName || me.email || '?');
     av.style.background = u.color || colorFor(me.uid);
   }
 
@@ -131,28 +145,35 @@ async function init() {
 }
 
 async function renderChats(mine) {
+  // Clear old dot listeners
+  dotListeners.forEach(off => off());
+  dotListeners = [];
+
   const list = document.getElementById('chats-list');
   list.innerHTML = '';
   allChats = [];
-  if(!mine.length) {
+
+  if (!mine.length) {
     document.getElementById('empty-state').classList.remove('hidden');
     return;
   }
   document.getElementById('empty-state').classList.add('hidden');
 
   const chatObjects = [];
-  for(const [id, ch] of mine) {
-    const oid = id.split('__').find(x=>x!==me.uid);
-    if(!oid) continue;
+  for (const [id, ch] of mine) {
+    const parts = id.split('__');
+    const oid = parts.find(x => x !== me.uid);
+    if (!oid) continue;
     const uSnap = await get(ref(db, `users/${oid}`));
-    if(!uSnap.exists()) continue;
+    if (!uSnap.exists()) continue;
     const u = uSnap.val();
     const msgs = ch.messages ? Object.values(ch.messages) : [];
-    const last = msgs.sort((a,b)=>a.ts-b.ts).at(-1);
-    const unread = msgs.filter(m=>m.senderId!==me.uid&&!m.seen).length;
+    const last = msgs.sort((a, b) => a.ts - b.ts).at(-1);
+    const unread = msgs.filter(m => m.senderId !== me.uid && !m.seen).length;
     chatObjects.push({ id, oid, u, last, unread });
   }
-  chatObjects.sort((a,b)=>(b.last?.ts||0)-(a.last?.ts||0));
+
+  chatObjects.sort((a, b) => (b.last?.ts || 0) - (a.last?.ts || 0));
   allChats = chatObjects;
 
   let totalUnread = 0;
@@ -162,7 +183,7 @@ async function renderChats(mine) {
   });
 
   const badge = document.getElementById('total-badge');
-  if(totalUnread > 0) {
+  if (totalUnread > 0) {
     badge.textContent = totalUnread > 99 ? '99+' : totalUnread;
     badge.classList.remove('hidden');
   } else {
@@ -173,19 +194,21 @@ async function renderChats(mine) {
 function buildChatItem({ id, oid, u, last, unread }) {
   const item = document.createElement('div');
   item.className = 'chat-item';
-  item.dataset.name = (u.name||'').toLowerCase();
+  item.dataset.name = (u.name || '').toLowerCase();
 
   let preview = 'Tap to chat';
-  if(last) {
-    if(last.type==='voice') preview = '🎙 Voice message';
-    else if(last.type==='image') preview = '🖼 Photo';
-    else if(last.deleted) preview = '🚫 Message deleted';
-    else preview = (last.senderId===me.uid?'You: ':'')+( last.text||'' );
+  if (last) {
+    if (last.type === 'voice') preview = '🎙 Voice message';
+    else if (last.type === 'image') preview = '🖼 Photo';
+    else if (last.type === 'video') preview = '🎬 Video';
+    else if (last.type === 'call') preview = `📞 ${last.callType === 'video' ? 'Video' : 'Voice'} call`;
+    else if (last.deleted) preview = '🚫 Message deleted';
+    else preview = (last.senderId === me.uid ? 'You: ' : '') + (last.text || '');
   }
 
   const avHtml = u.photo
     ? `<img src="${u.photo}" alt="" style="width:52px;height:52px;border-radius:50%;object-fit:cover;">`
-    : `<div class="av chat-av" style="background:${u.color||colorFor(oid)}">${u.initials||initialsOf(u.name||'?')}</div>`;
+    : `<div class="av chat-av" style="background:${u.color || colorFor(oid)}">${u.initials || initialsOf(u.name || '?')}</div>`;
 
   item.innerHTML = `
     <div class="chat-av-wrap">
@@ -194,7 +217,7 @@ function buildChatItem({ id, oid, u, last, unread }) {
     </div>
     <div class="chat-body">
       <div class="chat-name">
-        ${u.name||'User'}
+        ${u.name || 'User'}
         ${u.verified ? `<img src="${VERIFIED_BADGE}" style="width:14px;height:14px;vertical-align:middle;margin-left:3px;animation:shine 2s infinite;" title="Verified">` : ''}
       </div>
       <div class="chat-preview">${preview}</div>
@@ -206,17 +229,22 @@ function buildChatItem({ id, oid, u, last, unread }) {
 
   item.onclick = () => {
     sessionStorage.setItem('cc_chat_target', JSON.stringify({
-      uid: oid, name: u.name,
-      initials: u.initials||initialsOf(u.name||'?'),
-      color: u.color||colorFor(oid), photo: u.photo||''
+      uid: oid,
+      name: u.name,
+      initials: u.initials || initialsOf(u.name || '?'),
+      color: u.color || colorFor(oid),
+      photo: u.photo || ''
     }));
     go('chat.html');
   };
 
-  onValue(ref(db, `users/${oid}/online`), s => {
+  const { onValue: ov, off: offFn } = { onValue, off: import('./firebase.js').then ? null : null };
+  const dotRef = ref(db, `users/${oid}/online`);
+  const unsub = onValue(dotRef, s => {
     const dot = document.getElementById(`dot-${oid}`);
-    if(dot) dot.style.display = s.val() ? 'block' : 'none';
+    if (dot) dot.style.display = s.val() ? 'block' : 'none';
   });
+  dotListeners.push(unsub);
 
   return item;
 }
@@ -228,7 +256,5 @@ window.filterChats = () => {
   });
 };
 </script>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-<script>eruda.init();</script>
 </body>
 </html>
