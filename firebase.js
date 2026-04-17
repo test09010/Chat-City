@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+import { getAuth, onAuthStateChanged, signOut, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
 import { getDatabase, ref, get, set, push, update, remove, onValue, off, onDisconnect } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
 
 // Firebase Config
@@ -17,18 +17,21 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getDatabase(app);
 
+// Google Auth Provider
+export const gProvider = new GoogleAuthProvider();
+
 // Constants
 export const ref_ = ref;
 export { get, set, push, update, remove, onValue, off, onDisconnect };
 export { updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword };
-export { onAuthStateChanged, signOut };
+export { onAuthStateChanged, signOut, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail };
 
 const VAPID_KEY = 'BOZAB1T7v4ZhpbAFgatdb8PRtimuqCEjr7tYgYZF7UJwJeVTq_gkAq6CgcOF_-GfLUnlwCGIdsqkM8nnpoUXnc';
 const BACKEND_URL = 'https://notify-backend-chatcity.onrender.com';
 export const ADMIN_UID = 'admin_system_001';
 export const ADMIN_EMAIL = 'admin@chatcity.com';
 
-// Utilities
+// ── Utilities ──
 export const colorFor = uid => {
   const colors = ['#7c6eff', '#ff6b9d', '#2dd4a0', '#f7c94b', '#ff5370'];
   let hash = 0;
@@ -60,7 +63,7 @@ export const escHtml = str => {
 
 export const VERIFIED_BADGE = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%232dd4a0"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
 
-// Session Management
+// ── Session Management ──
 const SESSION_KEY = 'cc_session';
 
 export const saveSession = (uid, passcode) => {
@@ -74,10 +77,10 @@ export const getSession = () => {
 
 export const clearSession = () => localStorage.removeItem(SESSION_KEY);
 
-// Navigation
+// ── Navigation ──
 export const go = path => { window.location.href = path; };
 
-// Toast
+// ── Toast ──
 export const toast = (msg, type = 'info') => {
   const el = document.getElementById('toast') || document.createElement('div');
   if (!el.id) { el.id = 'toast'; document.body.appendChild(el); }
@@ -86,7 +89,7 @@ export const toast = (msg, type = 'info') => {
   setTimeout(() => el.classList.remove('show'), 3000);
 };
 
-// Online Status
+// ── Online Status ──
 export const setOnline = async uid => {
   const userRef = ref(db, `users/${uid}`);
   await set(userRef, { online: true, lastSeen: Date.now() }, { merge: true });
@@ -128,10 +131,10 @@ export const initFCM = async uid => {
       console.warn('⚠️ [FCM] Service Worker registration failed:', e.message);
     }
 
-    // ✅ FIXED: Import Firebase Messaging
-const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js');
-
-const messaging = getMessaging(app);
+    // Import Firebase Messaging
+    const { getMessaging, getToken, onMessage } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js');
+    
+    const messaging = getMessaging(app);
 
     // Get FCM token
     try {
@@ -214,7 +217,7 @@ export const sendPushToUser = async (receiverUid, title, body, url = 'home.html'
   }
 };
 
-// Admin check
+// ── Admin Check ──
 export const isAdmin = async uid => {
   try {
     const snap = await get(ref(db, `users/${uid}`));
@@ -229,7 +232,54 @@ export const isAdmin = async uid => {
   }
 };
 
-// User utilities
+// ── User Utilities ──
+export const generateUserCode = uid => {
+  return uid.substring(0, 8).toUpperCase();
+};
+
+export const createUserSearchIndex = async (uid, userData) => {
+  const code = generateUserCode(uid);
+  const name = userData.name || '';
+  
+  await set(ref(db, `users/${uid}`), {
+    ...userData,
+    friendCode: code,
+    searchIndex: name.toLowerCase()
+  });
+};
+
+export const updateUserSearchIndex = async (uid, userData) => {
+  const code = generateUserCode(uid);
+  await set(ref(db, `users/${uid}/friendCode`), code);
+};
+
+export const validateEmail = email => {
+  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return regex.test(email);
+};
+
+export const findUserByCode = async code => {
+  const snap = await get(ref(db, 'users'));
+  let found = null;
+  snap.forEach(child => {
+    const u = child.val();
+    if (generateUserCode(child.key) === code.toUpperCase()) {
+      found = { uid: child.key, ...u };
+    }
+  });
+  return found;
+};
+
+export const addFriendByCode = async (myUid, code) => {
+  const user = await findUserByCode(code);
+  if (!user) throw new Error('User not found');
+  if (user.uid === myUid) throw new Error('Cannot add yourself');
+  
+  await set(ref(db, `users/${myUid}/contacts/${user.uid}`), true);
+  await set(ref(db, `users/${user.uid}/contacts/${myUid}`), true);
+  return user;
+};
+
 export const getAllUsers = async () => {
   const snap = await get(ref(db, 'users'));
   const users = [];
@@ -273,38 +323,7 @@ export const sendSystemMessage = async (fromUid, toUid, text) => {
   });
 };
 
-export const generateUserCode = uid => {
-  return uid.substring(0, 8).toUpperCase();
-};
-
-export const updateUserSearchIndex = async (uid, userData) => {
-  const code = generateUserCode(uid);
-  await set(ref(db, `users/${uid}/friendCode`), code);
-};
-
-export const findUserByCode = async code => {
-  const snap = await get(ref(db, 'users'));
-  let found = null;
-  snap.forEach(child => {
-    const u = child.val();
-    if (generateUserCode(child.key) === code.toUpperCase()) {
-      found = { uid: child.key, ...u };
-    }
-  });
-  return found;
-};
-
-export const addFriendByCode = async (myUid, code) => {
-  const user = await findUserByCode(code);
-  if (!user) throw new Error('User not found');
-  if (user.uid === myUid) throw new Error('Cannot add yourself');
-  
-  await set(ref(db, `users/${myUid}/contacts/${user.uid}`), true);
-  await set(ref(db, `users/${user.uid}/contacts/${myUid}`), true);
-  return user;
-};
-
-// Offline queue
+// ── Offline Queue ──
 let offlineQueue = [];
 
 export const isAppOnline = () => navigator.onLine;
